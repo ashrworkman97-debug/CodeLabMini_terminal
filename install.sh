@@ -36,6 +36,7 @@ fi
 printf '\nCLM-1 v%s installed/updated.\n' "$VERSION"
 printf 'Firmware: %s/clm_firmware.ino\n' "$DATA_DIR"
 printf 'Command list: %s/COMMANDS.txt\n' "$DATA_DIR"
+printf 'Terms of use: %s/TERMS_OF_USE.md\n' "$DATA_DIR"
 printf 'Custom macros: %s/custom_commands.json\n' "$DATA_DIR"
 printf 'API key file:  ~/.config/clm-1/openai_api_key (owner-only permissions)\n'
 printf '\nReload PATH in this terminal with:\n  source ~/.bashrc\n'
