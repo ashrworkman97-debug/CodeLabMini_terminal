@@ -2,6 +2,14 @@
 
 Notable changes to CLM-1 are documented here.
 
+## 1.4.0 — Direct Firmware Flashing
+
+- Added `clm_h@cker_init` for local Arduino CLI compilation and USB-serial firmware uploads.
+- Added FTDI 0403:6015 detection, explicit port selection, compile-only mode, and typed FLASH confirmation.
+- Added prompt-based installation of the required Arduino platform core.
+- Added offline uploader tests and project Terms of Use.
+- Updated the host application, installer, and command documentation to 1.4.0.
+
 ## Unreleased
 
 - Added offline unit tests for the AI macro validator.
