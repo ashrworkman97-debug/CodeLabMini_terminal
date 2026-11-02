@@ -38,7 +38,7 @@ CLM-1 is an open-source command-line toolkit for the **Let's Start Coding Code L
 ## Requirements
 
 - A Code Lab Mini and a USB data cable.
-- Linux, or ChromeOS with the Linux development environment enabled.
+- Windows 10/11, macOS, Linux, or ChromeOS with the Linux development environment enabled.
 - Python 3.10 or newer.
 - `pyserial` 3.5 or newer.
 - Permission to access the USB serial device.
@@ -93,7 +93,9 @@ source ~/.bashrc
 
 Launch the console with `clm`, or connect immediately with `clm device clm`.
 
-### Windows 10/11
+### Windows and macOS
+
+#### Windows 10/11
 
 Open PowerShell in the cloned repository folder. If needed, install Python 3.10+ from [python.org](https://www.python.org/downloads/windows/) and enable the Python launcher (`py`). Run:
 
@@ -112,7 +114,7 @@ clm connect COM3
 
 Use the COM port shown by `clm scan`; it may not be COM3. No administrator access is required. If Windows does not expose the Mini as a serial port, install the appropriate FTDI VCP driver from [FTDI](https://ftdichip.com/drivers/).
 
-### macOS
+#### macOS
 
 Install Python 3.10+ from [python.org](https://www.python.org/downloads/macos/) if it is not already available. In Terminal, clone the repository and run:
 
@@ -242,7 +244,7 @@ AI features require an **OpenAI API key**. API usage is billed separately from a
 
 Generated commands are declarative action data, not executable Python or shell code. The validator restricts actions to supported LED, color, beep, motor, wait, and blink operations, applies parameter and duration limits, and asks for confirmation before saving.
 
-The API key is stored locally under `~/.config/clm-1/` with owner-only file permissions. You can also provide `OPENAI_API_KEY` through the environment. Never commit API keys, settings, or personal custom-command files to Git.
+The API key is stored locally in the operating system's per-user CLM-1 configuration directory (Linux: `~/.config/clm-1/`; macOS: `~/Library/Application Support/CLM-1/Config/`; Windows: `%APPDATA%\\CLM-1\\`). CLM-1 restricts file permissions where the operating system supports them. You can also provide `OPENAI_API_KEY` through the environment. Never commit API keys, settings, or personal custom-command files to Git.
 
 ## Run tests
 
