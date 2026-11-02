@@ -10,6 +10,15 @@ Notable changes to CLM-1 are documented here.
 - Added offline uploader tests and project Terms of Use.
 - Updated the host application, installer, and command documentation to 1.4.0.
 
+## 1.5.0 — Windows and macOS Support
+
+- Added native per-user PowerShell installer for Windows 10/11.
+- Added macOS installer with an isolated Python environment and shell launchers.
+- Added platform-aware application/configuration storage paths.
+- Updated serial-port examples and explicit-port handling for COM ports and macOS device paths.
+- Made API-key file writing compatible with Windows.
+- Expanded CI and tests to cover Linux, Windows, and macOS.
+
 ## Unreleased
 
 - Added offline unit tests for the AI macro validator.
