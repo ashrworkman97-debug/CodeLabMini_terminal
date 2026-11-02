@@ -15,8 +15,9 @@ from typing import Optional
 from clm_ai import (
     handle_ai_command, handle_custom_command, load_commands, run_custom_command,
 )
+from clm_flash import handle_flash_command
 
-APP_VERSION = "1.3.0"
+APP_VERSION = "1.4.0"
 DEVICE_NAME = "Code Lab Mini"
 USB_VID = 0x0403
 USB_PID = 0x6015
@@ -245,6 +246,7 @@ DEVICE / CONNECTION
   status, buttons         Read buttons and knob
   stream on|off           Enable/disable live input updates
   reconnect               Reopen USB serial connection
+  clm_h@cker_init          Compile and flash CLM-1 firmware over USB
   echo TEXT               Send text to the Mini and echo it back
   reset, panic            Turn off LEDs, speaker and motor
   quit, exit              Leave CLM-1
@@ -481,6 +483,25 @@ def shell(initial_port: Optional[str] = None) -> int:
         if cmd == "ai":
             handle_ai_command(args)
             continue
+        if cmd == "clm_h@cker_init":
+            previous_port = link.port if link else None
+            if link:
+                link.close()
+                link = None
+            flash_code, flash_port = handle_flash_command(args, default_port=previous_port)
+            reconnect_port = flash_port or previous_port
+            if reconnect_port:
+                time.sleep(1.0)
+                try:
+                    link = SerialLink(reconnect_port)
+                    print(f"[host] Reconnected to {reconnect_port}.")
+                    time.sleep(0.2)
+                    link.send("PING")
+                    link.send("INFO")
+                except RuntimeError as exc:
+                    link = None
+                    print(f"[connection] Could not reopen the serial port: {exc}")
+            continue
         if cmd == "custom":
             handle_custom_command(args, link)
             continue
@@ -714,11 +735,14 @@ def main(argv=None) -> int:
         return shell()
     first = args[0].lower()
     if first in ("-h", "--help", "help"):
-        print("Usage: clm [command]\n\n  clm                  Start interactive CLM-1 console\n  clm device clm       Connect to the Code Lab Mini and start console\n  clm device           List/identify devices\n  clm scan             Scan serial ports\n  clm connect [PORT]   Connect using a specified serial port\n  clm --version        Show version\n  clm ai setup         Configure an OpenAI API key\n  clm ai create IDEA   Generate and save a custom command\n  clm custom list      List saved custom commands\n")
+        print("Usage: clm [command]\n\n  clm                  Start interactive CLM-1 console\n  clm device clm       Connect to the Code Lab Mini and start console\n  clm device           List/identify devices\n  clm scan             Scan serial ports\n  clm connect [PORT]   Connect using a specified serial port\n  clm_h@cker_init     Compile and flash bundled firmware\n  clm_h@cker_init --compile-only  Compile without uploading\n  clm --version        Show version\n  clm ai setup         Configure an OpenAI API key\n  clm ai create IDEA   Generate and save a custom command\n  clm custom list      List saved custom commands\n")
         return 0
     if first in ("-v", "--version", "version"):
         print(f"CLM-1 {APP_VERSION}")
         return 0
+    if first == "clm_h@cker_init":
+        flash_code, _ = handle_flash_command(args[1:])
+        return flash_code
     if first == "ai":
         handle_ai_command(args[1:])
         return 0
