@@ -4,9 +4,9 @@ set -euo pipefail
 SOURCE_DIR="$(cd "$(dirname "$0")" && pwd)"
 BIN_DIR="$HOME/.local/bin"
 DATA_DIR="$HOME/.local/share/clm-1"
-VERSION="1.3.0"
+VERSION="1.4.0"
 
-for required_file in clm clm_ai.py clm_firmware.ino; do
+for required_file in clm clm_ai.py clm_flash.py clm_firmware.ino TERMS_OF_USE.md; do
   if [[ ! -f "$SOURCE_DIR/$required_file" ]]; then
     printf 'Error: required project file is missing: %s\n' "$SOURCE_DIR/$required_file" >&2
     exit 1
@@ -16,10 +16,12 @@ done
 mkdir -p "$BIN_DIR" "$DATA_DIR"
 install -m 0755 "$SOURCE_DIR/clm" "$BIN_DIR/clm"
 install -m 0644 "$SOURCE_DIR/clm_ai.py" "$BIN_DIR/clm_ai.py"
+install -m 0644 "$SOURCE_DIR/clm_flash.py" "$BIN_DIR/clm_flash.py"
 install -m 0644 "$SOURCE_DIR/clm_firmware.ino" "$DATA_DIR/clm_firmware.ino"
 install -m 0644 "$SOURCE_DIR/README.md" "$DATA_DIR/README.md"
 install -m 0644 "$SOURCE_DIR/COMMANDS.txt" "$DATA_DIR/COMMANDS.txt"
 install -m 0644 "$SOURCE_DIR/CHANGELOG.md" "$DATA_DIR/CHANGELOG.md"
+install -m 0644 "$SOURCE_DIR/TERMS_OF_USE.md" "$DATA_DIR/TERMS_OF_USE.md"
 install -m 0644 "$SOURCE_DIR/requirements.txt" "$DATA_DIR/requirements.txt"
 printf '%s\n' "$VERSION" > "$DATA_DIR/VERSION"
 
