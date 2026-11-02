@@ -9,6 +9,8 @@ import tempfile
 from pathlib import Path
 from typing import Iterable, Optional
 
+from clm_paths import APP_DIR
+
 USB_VID = 0x0403
 USB_PID = 0x6015
 DEFAULT_FQBN = "arduino:avr:uno"
@@ -30,13 +32,13 @@ def find_firmware(search_dirs: Optional[Iterable[Path]] = None) -> Path:
     if search_dirs is None:
         search_dirs = (
             Path(__file__).resolve().parent,
-            Path.home() / ".local" / "share" / "clm-1",
+            APP_DIR,
         )
     for directory in search_dirs:
         candidate = Path(directory) / "clm_firmware.ino"
         if candidate.is_file():
             return candidate
-    raise FileNotFoundError("clm_firmware.ino not found. Re-clone the repo or rerun install.sh.")
+    raise FileNotFoundError("clm_firmware.ino not found. Re-clone the repository or rerun the platform installer.")
 
 
 def select_port(ports: Iterable[object], requested: Optional[str] = None):
@@ -69,7 +71,7 @@ def _list_ports():
     try:
         from serial.tools import list_ports
     except ImportError as exc:
-        raise RuntimeError("Install pyserial with: sudo apt install python3-serial") from exc
+        raise RuntimeError("Install pyserial with: python -m pip install pyserial") from exc
     return list(list_ports.comports())
 
 
