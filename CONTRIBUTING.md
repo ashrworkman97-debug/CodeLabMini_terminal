@@ -17,8 +17,8 @@ From the repository root:
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 -m py_compile clm clm_ai.py clm_flash.py
-bash -n install.sh
+python3 -m py_compile clm clm_ai.py clm_flash.py clm_paths.py
+bash -n install.sh install_macos.sh
 python3 clm --version
 python3 clm --help
 ```
