@@ -67,7 +67,12 @@ jobs:
 
       - name: Check installer syntax
         if: runner.os != 'Windows'
-        run: bash -n install.sh install_macos.sh
+        run: bash -n install.sh && bash -n install_macos.sh
+
+      - name: Check Windows installer syntax
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: $null = [scriptblock]::Create((Get-Content -Raw install_windows.ps1))
 
       - name: Check CLI startup
         run: |
