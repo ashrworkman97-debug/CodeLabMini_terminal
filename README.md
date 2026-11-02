@@ -74,7 +74,7 @@ bash install.sh
 source ~/.bashrc
 ```
 
-The installer places the command-line application in your user environment and adds `~/.local/bin` to PATH. If the `clm` command is not found, open a new terminal or run `source ~/.bashrc`.
+The installer places the command-line application in `~/.local/bin` and adds that directory to PATH in `~/.bashrc`. Because `bash install.sh` runs the installer in a separate process, that PATH change does not automatically update the terminal you already have open. Run `source ~/.bashrc` to reload the updated PATH in your current terminal (or simply open a new terminal). If `clm` is still not found, check that `~/.local/bin` is in your PATH.
 
 ## Install the Mini firmware
 
