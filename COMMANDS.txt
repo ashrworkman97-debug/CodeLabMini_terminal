@@ -1,15 +1,15 @@
-CLM-1 v1.3.0 — COMMAND REFERENCE
+CLM-1 v1.5.0 — COMMAND REFERENCE
 =================================
 
 START / CONNECTION
   clm                         Start the interactive console
   clm device clm              Connect to the Code Lab Mini
   clm scan                    List serial devices
-  clm connect /dev/ttyUSB0    Connect to a selected serial port
+  clm connect PORT            Connect to a selected serial port (COM3, /dev/cu.*, etc.)
 
 FIRMWARE FLASHER
   clm_h@cker_init                 Compile and flash bundled CLM-1 firmware
-  clm_h@cker_init --port PORT     Select a specific serial port
+  clm_h@cker_init --port PORT     Select a specific serial port (COM3 or /dev/cu.*)
   clm_h@cker_init --compile-only  Compile only; do not upload
   (Requires arduino-cli. Upload requires typing FLASH to confirm.)
 
