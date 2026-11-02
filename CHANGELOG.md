@@ -19,6 +19,12 @@ Notable changes to CLM-1 are documented here.
 - Made API-key file writing compatible with Windows.
 - Expanded CI and tests to cover Linux, Windows, and macOS.
 
+## 1.6.0 — Power-up and Self-Updater
+
+- Reworked POWERUP into a longer charging sequence with escalating pitch, LED cycling, vibration crescendo, and a final burst.
+- Added a quiet automatic GitHub update check at startup and a `clm update` self-updater.
+- Added `clm update check` for a manual version check.
+
 ## Unreleased
 
 - Added offline unit tests for the AI macro validator.
