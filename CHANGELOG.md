@@ -1,5 +1,15 @@
 # Changelog
 
+Notable changes to CLM-1 are documented here.
+
+## Unreleased
+
+- Added offline unit tests for the AI macro validator.
+- Added GitHub Actions CI for supported Python versions, Python compilation, installer syntax, and CLI startup.
+- Added secret/configuration exclusions, a security policy, and GitHub issue/PR templates.
+- Improved the installer so a missing `~/.bashrc` is created before adding the CLM-1 PATH entry.
+- Refreshed project documentation and contributor guidance.
+
 ## 1.3.0 — AI Command Studio and Mini Firmware
 
 - Added optional OpenAI API integration for generating custom hardware macros.

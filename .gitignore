@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments and local secrets
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+openai_api_key
+settings.json
+custom_commands.json
+
+# Logs and local/editor files
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
