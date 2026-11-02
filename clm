@@ -16,8 +16,9 @@ from clm_ai import (
     handle_ai_command, handle_custom_command, load_commands, run_custom_command,
 )
 from clm_flash import handle_flash_command
+from clm_update import check_for_update, install_update
 
-APP_VERSION = "1.5.0"
+APP_VERSION = "1.6.0"
 DEVICE_NAME = "Code Lab Mini"
 USB_VID = 0x0403
 USB_PID = 0x6015
@@ -239,6 +240,8 @@ def print_help():
 DEVICE / CONNECTION
   help, ?                 Show all commands
   version                 Show CLM-1 version
+  update                  Download and install the latest CLM-1 update
+  update check            Check GitHub for a newer version
   device                  Show active USB serial device
   scan                    Scan serial ports
   ping                    Check whether firmware responds
@@ -447,6 +450,7 @@ def shell(initial_port: Optional[str] = None) -> int:
     print(f"CLM-1 Command Line Manager v{APP_VERSION}")
     print("Type `help` for commands. Type `quit` to exit.\n")
     started_at = time.monotonic()
+    check_for_update(APP_VERSION, silent=True)
     link = None
     try:
         port = resolve_port(initial_port)
@@ -480,6 +484,14 @@ def shell(initial_port: Optional[str] = None) -> int:
 
         if cmd in ("quit", "exit"):
             break
+        if cmd == "update":
+            if args and args[0].lower() == "check":
+                check_for_update(APP_VERSION, silent=False, force=True)
+            elif not args:
+                install_update()
+            else:
+                print("Usage: update [check]")
+            continue
         if cmd == "ai":
             handle_ai_command(args)
             continue
@@ -737,6 +749,14 @@ def main(argv=None) -> int:
     if first in ("-h", "--help", "help"):
         print("Usage: clm [command]\n\n  clm                  Start interactive CLM-1 console\n  clm device clm       Connect to the Code Lab Mini and start console\n  clm device           List/identify devices\n  clm scan             Scan serial ports\n  clm connect [PORT]   Connect using a specified serial port\n  clm_h@cker_init     Compile and flash bundled firmware\n  clm_h@cker_init --compile-only  Compile without uploading\n  clm --version        Show version\n  clm ai setup         Configure an OpenAI API key\n  clm ai create IDEA   Generate and save a custom command\n  clm custom list      List saved custom commands\n")
         return 0
+    if first == "update":
+        if len(args) == 1 and args[1].lower() == "check":
+            check_for_update(APP_VERSION, silent=False, force=True)
+            return 0
+        if len(args) == 1:
+            return install_update()
+        print("Usage: clm update [check]")
+        return 2
     if first in ("-v", "--version", "version"):
         print(f"CLM-1 {APP_VERSION}")
         return 0
