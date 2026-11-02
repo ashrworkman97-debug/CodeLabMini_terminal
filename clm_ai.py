@@ -16,8 +16,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-APP_DIR = Path.home() / ".local" / "share" / "clm-1"
-CONFIG_DIR = Path.home() / ".config" / "clm-1"
+from clm_paths import APP_DIR, CONFIG_DIR
 COMMANDS_FILE = APP_DIR / "custom_commands.json"
 SETTINGS_FILE = CONFIG_DIR / "settings.json"
 KEY_FILE = CONFIG_DIR / "openai_api_key"
@@ -96,7 +95,8 @@ def _atomic_write(path: Path, content: str, mode: int = 0o600) -> None:
     _secure_mkdir(path.parent)
     fd, tmp_name = tempfile.mkstemp(prefix=path.name + ".", dir=str(path.parent))
     try:
-        os.fchmod(fd, mode)
+        if hasattr(os, "fchmod"):
+            os.fchmod(fd, mode)
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             handle.write(content)
             handle.flush()
