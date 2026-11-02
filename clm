@@ -1,0 +1,746 @@
+#!/usr/bin/env python3
+"""CLM-1: Command Line Manager for the Let's Start Coding Code Lab Mini."""
+from __future__ import annotations
+
+import argparse
+import datetime as _datetime
+import queue
+import random
+import shlex
+import sys
+import threading
+import time
+from typing import Optional
+
+from clm_ai import (
+    handle_ai_command, handle_custom_command, load_commands, run_custom_command,
+)
+
+APP_VERSION = "1.3.0"
+DEVICE_NAME = "Code Lab Mini"
+USB_VID = 0x0403
+USB_PID = 0x6015
+DEFAULT_BAUD = 9600
+FIRMWARE_VERSION = "1.3.0"
+
+MORSE = {
+    "A": ".-", "B": "-...", "C": "-.-.", "D": "-..", "E": ".",
+    "F": "..-.", "G": "--.", "H": "....", "I": "..", "J": ".---",
+    "K": "-.-", "L": ".-..", "M": "--", "N": "-.", "O": "---",
+    "P": ".--.", "Q": "--.-", "R": ".-.", "S": "...", "T": "-",
+    "U": "..-", "V": "...-", "W": ".--", "X": "-..-", "Y": "-.--",
+    "Z": "--..", "0": "-----", "1": ".----", "2": "..---",
+    "3": "...--", "4": "....-", "5": ".....", "6": "-....",
+    "7": "--...", "8": "---..", "9": "----.",
+}
+
+JOKES = [
+    "There are 10 kinds of people: those who understand binary and those who don't.",
+    "Why did the programmer quit? Because they didn't get arrays.",
+    "A UDP packet walks into a bar. No one knows if it gets there.",
+    "The Code Lab Mini wanted a vacation, but it couldn't find the right port.",
+    "I told my computer I needed a break. It said: 'No problem, I'll go to sleep.'",
+]
+FORTUNES = [
+    "A mysterious beep will improve your afternoon.",
+    "Today is an excellent day to blink an LED for absolutely no reason.",
+    "The knob knows more than it is letting on.",
+    "Your next experiment will work on the third try. Probably.",
+    "Beware of serial ports bearing errno 5.",
+    "A tiny robot applauds your curiosity.",
+    "The answer is 42. The question is still compiling.",
+]
+MAGIC_ANSWERS = [
+    "Absolutely.", "Outlook is extremely beep-y.", "Ask again after a firmware upload.",
+    "The knob says maybe.", "Definitely not. (Try anyway.)", "Signs point to PONG.",
+    "Your LEDs have consulted the oracle: YES.",
+]
+
+
+def load_serial_modules():
+    try:
+        import serial
+        from serial.tools import list_ports
+        return serial, list_ports
+    except ImportError:
+        print("CLM-1 needs pyserial. Install it with:", file=sys.stderr)
+        print("  sudo apt install python3-serial", file=sys.stderr)
+        raise SystemExit(2)
+
+
+def get_ports():
+    _, list_ports = load_serial_modules()
+    return list(list_ports.comports())
+
+
+def show_devices() -> int:
+    ports = get_ports()
+    print("CLM-1 device scan")
+    print("-----------------")
+    if not ports:
+        print("No serial ports found.")
+        print("In ChromeOS, share the FTDI USB device with Linux in Settings → Developers → Linux USB preferences.")
+        return 1
+    matched = False
+    for port in ports:
+        vid = port.vid if port.vid is not None else -1
+        pid = port.pid if port.pid is not None else -1
+        is_clm = (vid, pid) == (USB_VID, USB_PID)
+        matched |= is_clm
+        tag = "  <--- Code Lab Mini (FTDI)" if is_clm else ""
+        print(f"{port.device:16} {port.description or 'Serial device'}  VID:PID={vid:04x}:{pid:04x}{tag}")
+    if not matched:
+        print("\nNo 0403:6015 FTDI device detected. Is it plugged in and shared with Linux?")
+    return 0 if matched else 1
+
+
+class SerialLink:
+    def __init__(self, port: str, baud: int = DEFAULT_BAUD):
+        serial, _ = load_serial_modules()
+        self.serial_module = serial
+        self.port = port
+        self.baud = baud
+        self.ser = serial.Serial()
+        self.ser.port = port
+        self.ser.baudrate = baud
+        self.ser.timeout = 0.2
+        self.ser.write_timeout = 1.0
+        self.ser.xonxoff = False
+        self.ser.rtscts = False
+        self.ser.dsrdtr = False
+        self.ser.dtr = False
+        self.ser.rts = False
+        self.reader_stop = threading.Event()
+        self.reader_error: queue.Queue[str] = queue.Queue()
+        self.last_state = None
+        self.write_lock = threading.Lock()
+        self.reader = None
+        self.open()
+
+    def explain_serial_error(self, exc: Exception) -> str:
+        message = str(exc)
+        lower = message.lower()
+        if "input/output error" in lower or "errno 5" in lower:
+            return (
+                f"USB serial I/O error on {self.port}: {message}\n"
+                "Linux lost access to the USB serial interface. Unplug/replug the Mini, "
+                "share it with Linux again in ChromeOS USB preferences, and close the "
+                "manufacturer's editor/Serial Monitor before retrying."
+            )
+        if "permission" in lower or "access is denied" in lower:
+            return (
+                f"Permission denied opening {self.port}: {message}\n"
+                "Try `sudo usermod -aG dialout $USER`, then restart the Linux container."
+            )
+        return f"Serial error on {self.port}: {message}"
+
+    def open(self):
+        try:
+            self.ser.open()
+        except (OSError, self.serial_module.SerialException) as exc:
+            raise RuntimeError(self.explain_serial_error(exc)) from exc
+        self.reader = threading.Thread(target=self.read_loop, daemon=True)
+        self.reader.start()
+
+    def send(self, command: str) -> bool:
+        try:
+            payload = (command.strip() + "\n").encode("ascii", errors="strict")
+        except UnicodeEncodeError:
+            print("[error] Device commands must use plain ASCII characters.")
+            return False
+        if not self.ser.is_open:
+            print("[error] Serial port is closed. Use `reconnect`.")
+            return False
+        try:
+            with self.write_lock:
+                self.ser.write(payload)
+                self.ser.flush()
+            return True
+        except (OSError, self.serial_module.SerialException) as exc:
+            print("\n[USB ERROR] " + self.explain_serial_error(exc))
+            return False
+
+    def read_loop(self):
+        while not self.reader_stop.is_set():
+            try:
+                raw = self.ser.readline()
+            except (OSError, self.serial_module.SerialException) as exc:
+                if not self.reader_stop.is_set():
+                    self.reader_error.put(self.explain_serial_error(exc))
+                return
+            if not raw:
+                continue
+            line = raw.decode("utf-8", errors="replace").strip()
+            if not line:
+                continue
+            if line.startswith("STATE "):
+                parts = line.split()
+                if len(parts) == 6:
+                    try:
+                        state = tuple(int(value) for value in parts[1:])
+                    except ValueError:
+                        print(f"\n[device] {line}")
+                        continue
+                    if state != self.last_state:
+                        self.last_state = state
+                        a, b, left, right, knob = state
+                        print(f"\n[input] A={a} B={b} LEFT={left} RIGHT={right} KNOB={knob}")
+                continue
+            print(f"\n[device] {line}")
+
+    def check_reader(self):
+        try:
+            message = self.reader_error.get_nowait()
+        except queue.Empty:
+            return
+        print("\n[USB ERROR] " + message)
+
+    def close(self):
+        self.reader_stop.set()
+        if self.reader and self.reader.is_alive():
+            self.reader.join(timeout=0.8)
+        try:
+            if self.ser.is_open:
+                self.ser.close()
+        except Exception:
+            pass
+
+    def send_morse(self, message: str, unit_ms: int = 120, frequency: int = 700):
+        text = message.upper()
+        unsupported = sorted(set(ch for ch in text if ch != " " and ch not in MORSE))
+        if unsupported:
+            print("Unsupported characters skipped: " + " ".join(unsupported))
+        words = [word for word in text.split() if word]
+        if not words:
+            print("Nothing to transmit. Use A-Z, digits 0-9, and spaces.")
+            return
+        for word_index, word in enumerate(words):
+            letters = [ch for ch in word if ch in MORSE]
+            for letter_index, char in enumerate(letters):
+                pattern = MORSE[char]
+                for symbol_index, symbol in enumerate(pattern):
+                    duration = unit_ms if symbol == "." else unit_ms * 3
+                    if not self.send(f"BEEP {frequency} {duration}"):
+                        return
+                    time.sleep(duration / 1000)
+                    if symbol_index < len(pattern) - 1:
+                        time.sleep(unit_ms / 1000)
+                if letter_index < len(letters) - 1:
+                    time.sleep(3 * unit_ms / 1000)
+            if word_index < len(words) - 1:
+                time.sleep(7 * unit_ms / 1000)
+        self.send("STOP")
+
+
+def print_help():
+    print(f"""CLM-1 Command Line Manager v{APP_VERSION}
+
+DEVICE / CONNECTION
+  help, ?                 Show all commands
+  version                 Show CLM-1 version
+  device                  Show active USB serial device
+  scan                    Scan serial ports
+  ping                    Check whether firmware responds
+  info                    Firmware and chip info
+  status, buttons         Read buttons and knob
+  stream on|off           Enable/disable live input updates
+  reconnect               Reopen USB serial connection
+  echo TEXT               Send text to the Mini and echo it back
+  reset, panic            Turn off LEDs, speaker and motor
+  quit, exit              Leave CLM-1
+
+LIGHTS (1=RED, 2=GREEN, 3=BLUE)
+  led 1|2|3 [on|off|toggle]  Control one of the three jumbo LEDs
+  led red|green|blue [action]  Same thing using color names
+  led on|off|toggle        Red LED shortcut
+  led all on|off           Turn all three LEDs on/off
+  led clear                Turn all LEDs off
+  color NAME               off, red, green, blue, yellow, cyan, magenta, white
+  rgb R G B                Mix digital channels with 0 or 1 values
+  blink [LED] [count] [ms] Blink one LED; default LED 1, 3 times, 200 ms
+  chase [cycles] [ms]      Run a red-green-blue light chase
+  wave [cycles] [ms]       Run a back-and-forth light wave
+  rainbow [cycles] [ms]    Cycle through seven LED color combinations
+  ledtest                  Test red, green and blue LED mapping one by one
+
+SOUND / VIBRATION
+  beep [Hz] [ms]           Play a timed tone
+  tone [Hz]                Start a continuous tone
+  stop                     Stop tone and vibration
+  motor [0-255] [ms]       Vibrate at a strength for a duration
+  buzz [0-255] [ms]        Alias for motor
+  pulse [n] [strength] [on] [off]  Pulse the vibration motor
+  sos                      Transmit Morse SOS
+  morse TEXT               Transmit letters/digits as Morse
+  melody                   Play a short original chiptune
+  metro [BPM] [beats]      Metronome (20-240 BPM)
+
+SHOWS / EFFECTS
+  party [seconds]          Random lights, beeps and buzzes (1-10 sec)
+  siren [cycles]           Alternating siren tone and red/blue lights
+  alarm [cycles]           Beeping red alert
+  laser                    Descending sci-fi laser sound
+  powerup                  Rising power-up sound and lights
+  explosion                Dramatic descending sound + vibration
+  heartbeat [cycles]       Double-pulse heartbeat effect
+  countdown [number]       Countdown, then GO!
+  demo                     Run a little hardware showcase
+  ledtest                  Test the three LED outputs individually
+  glitch                   Random glitchy lights and chirps
+  beacon [cycles]          Triple-flash locator beacon
+  portal                   Sci-fi portal light/sound sequence
+  fireworks [count]        Launch light/sound/vibration fireworks
+  hyperspace               Rising sci-fi launch sequence
+  dice                     Roll a physical/electronic six-sided die
+  coin                     Flip heads or tails on the Mini
+  random                   Surprise color and tone
+  knob tone|motor|color|off  Turn the knob into an instrument/controller
+
+LOCAL TERMINAL FUN (doesn't need the Mini)
+  roll [sides] [count]      Roll dice in the terminal
+  rps                      Rock-paper-scissors
+  magic8                    Ask the CLM-1 fortune teller
+  joke                      Tell a programmer joke
+  fortune                   Get a tiny fortune
+  time                      Show the Chromebook's current time
+  uptime                    Show this CLM-1 session duration
+  whoami                    Identify the operator and device
+  ascii                     Print the CLM-1 logo
+  clear                     Clear the terminal
+  credits                   Show project credits
+
+AI COMMAND BUILDER
+  ai setup                  Securely save an OpenAI API key
+  ai test                   Test the API key
+  ai status                 Show AI configuration
+  ai model [MODEL]          Show/change the model
+  ai create DESCRIPTION     Ask AI to create a saved CLM command
+  ai forget                 Remove the saved API key
+  custom list               List saved AI-made commands
+  custom show NAME          Preview a saved command
+  custom run NAME           Run a saved command
+  custom remove NAME        Delete a saved command
+
+Examples:
+  led 2 on       color magenta       motor 180 400
+  rainbow 2 90   morse HELLO WORLD   knob tone
+  party 4        countdown 5         roll 20 3
+""")
+
+
+def resolve_port(explicit: Optional[str] = None) -> str:
+    ports = get_ports()
+    if explicit:
+        return explicit
+    matches = [p for p in ports if p.vid == USB_VID and p.pid == USB_PID]
+    if len(matches) == 1:
+        return matches[0].device
+    if len(matches) > 1:
+        print("More than one FTDI 0403:6015 device is connected:")
+        for port in matches:
+            print(f"  {port.device}")
+        raise RuntimeError("Use `clm connect /dev/ttyUSBx` to choose one.")
+    if len(ports) == 1:
+        return ports[0].device
+    if ports:
+        show_devices()
+        raise RuntimeError("Couldn't identify the Code Lab Mini. Specify its /dev/ttyUSB port.")
+    raise RuntimeError("No serial ports found. Plug in the Mini and share its USB device with Linux.")
+
+
+def need_link(link: Optional[SerialLink]) -> bool:
+    if link is None:
+        print("Not connected. Use `reconnect` or `scan`.")
+        return False
+    return True
+
+
+def send(link: Optional[SerialLink], command: str):
+    if need_link(link):
+        link.send(command)
+
+
+def parse_int(value: str, low: int, high: int) -> int:
+    number = int(value)
+    if number < low or number > high:
+        raise ValueError
+    return number
+
+
+def terminal_logo():
+    print(r"""
+   _____ _     __  __       _
+  / ____| |   |  \/  |     | |
+ | |    | |   | \  / | __ _| | __
+ | |    | |   | |\/| |/ _` | |/ /
+ | |____| |___| |  | | (_| |   <
+  \_____|_____|_|  |_|\__,_|_|\_\
+       COMMAND LINE MANAGER
+""")
+
+
+def local_command(cmd: str, args: list[str], started_at: float) -> bool:
+    """Handle local-only shell toys. Return True when command was handled."""
+    if cmd == "clear":
+        print("\033[2J\033[H", end="")
+        return True
+    if cmd == "ascii":
+        terminal_logo()
+        return True
+    if cmd == "joke":
+        print(random.choice(JOKES))
+        return True
+    if cmd == "fortune":
+        print("🔮 " + random.choice(FORTUNES))
+        return True
+    if cmd == "magic8":
+        question = " ".join(args).strip() or "Is this project awesome?"
+        print(f"Q: {question}\n🎱 {random.choice(MAGIC_ANSWERS)}")
+        return True
+    if cmd == "time":
+        print(_datetime.datetime.now().astimezone().strftime("%A, %B %d, %Y — %I:%M:%S %p %Z"))
+        return True
+    if cmd == "uptime":
+        seconds = int(time.monotonic() - started_at)
+        print(f"CLM-1 has been running for {seconds // 3600}h {(seconds % 3600) // 60}m {seconds % 60}s.")
+        return True
+    if cmd == "whoami":
+        print("System: CLM-1\nHost: Linux\nDevice: Let's Start Coding Code Lab Mini")
+        return True
+    if cmd == "credits":
+        print("CLM-1 Command Line Manager\nHost: Python 3 + pySerial\nFirmware: ATmega328P-compatible Arduino C++\nOptional AI command generation: OpenAI API.")
+        return True
+    if cmd == "roll":
+        try:
+            sides = parse_int(args[0], 2, 1_000_000) if args else 6
+            count = parse_int(args[1], 1, 30) if len(args) > 1 else 1
+            if len(args) > 2:
+                raise ValueError
+            results = [random.randint(1, sides) for _ in range(count)]
+            print(f"🎲 d{sides}: " + ", ".join(map(str, results)))
+            if count > 1:
+                print(f"Total: {sum(results)}")
+        except ValueError:
+            print("Usage: roll [sides 2-1000000] [count 1-30]")
+        return True
+    if cmd == "rps":
+        try:
+            choice = input("Choose rock, paper, or scissors: ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print("Cancelled.")
+            return True
+        if choice not in ("rock", "paper", "scissors"):
+            print("That's not rock, paper, or scissors.")
+        else:
+            cpu = random.choice(("rock", "paper", "scissors"))
+            outcome = "It's a tie!" if choice == cpu else (
+                "You win!" if (choice, cpu) in (("rock", "scissors"), ("paper", "rock"), ("scissors", "paper")) else "The computer wins!"
+            )
+            print(f"You: {choice} | CLM: {cpu} — {outcome}")
+        return True
+    return False
+
+
+def shell(initial_port: Optional[str] = None) -> int:
+    print(f"CLM-1 Command Line Manager v{APP_VERSION}")
+    print("Type `help` for commands. Type `quit` to exit.\n")
+    started_at = time.monotonic()
+    link = None
+    try:
+        port = resolve_port(initial_port)
+        link = SerialLink(port)
+        print(f"[host] Opened {port} at {DEFAULT_BAUD} baud.")
+        time.sleep(0.2)
+        link.send("PING")
+        link.send("INFO")
+    except RuntimeError as exc:
+        print(f"[connection] {exc}")
+        print("CLM-1 will start offline. Use `scan` and `reconnect` after fixing USB access.")
+
+    led_state = False
+    while True:
+        if link:
+            link.check_reader()
+        try:
+            line = input("CLM-1> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\nLeaving CLM-1.")
+            break
+        if not line:
+            continue
+        try:
+            words = shlex.split(line)
+        except ValueError as exc:
+            print(f"[syntax] {exc}")
+            continue
+        cmd = words[0].lower()
+        args = words[1:]
+
+        if cmd in ("quit", "exit"):
+            break
+        if cmd == "ai":
+            handle_ai_command(args)
+            continue
+        if cmd == "custom":
+            handle_custom_command(args, link)
+            continue
+        saved_commands = load_commands()
+        if cmd in saved_commands:
+            if args:
+                print(f"Usage: {cmd}  (custom commands do not take arguments)")
+            else:
+                run_custom_command(saved_commands[cmd], link)
+            continue
+        if cmd == "run":
+            if len(args) == 1:
+                handle_custom_command(["run", args[0]], link)
+            else:
+                print("Usage: run CUSTOM_COMMAND")
+            continue
+        if local_command(cmd, args, started_at):
+            continue
+        if cmd in ("help", "?"):
+            print_help()
+        elif cmd == "version":
+            print(f"CLM-1 {APP_VERSION} | firmware protocol CLM1/{FIRMWARE_VERSION} | AI macro builder enabled")
+        elif cmd in ("scan", "ports", "devices"):
+            try:
+                show_devices()
+            except SystemExit:
+                pass
+        elif cmd == "device":
+            if link and link.ser.is_open:
+                print(f"Connected: {DEVICE_NAME} on {link.port} at {link.baud} baud (FTDI 0403:6015)")
+            else:
+                print("No active device connection.")
+        elif cmd in ("ping", "info", "status", "buttons"):
+            send(link, {"ping": "PING", "info": "INFO", "status": "READ", "buttons": "READ"}[cmd])
+        elif cmd == "echo":
+            if args:
+                send(link, "ECHO " + " ".join(args))
+            else:
+                print("Usage: echo TEXT")
+        elif cmd == "led":
+            if not args:
+                print("Usage: led 1|2|3 [on|off|toggle]  (1 red, 2 green, 3 blue)")
+                continue
+            names = {"red": "1", "green": "2", "blue": "3"}
+            if args[0].lower() in ("on", "off", "toggle"):
+                led_number = "1"
+                action = args[0].upper()
+                if len(args) > 1:
+                    print("Usage: led on|off|toggle")
+                    continue
+            elif args[0].lower() in ("all", "clear"):
+                if args[0].lower() == "clear":
+                    action = "OFF"
+                else:
+                    action = args[1].upper() if len(args) > 1 else "ON"
+                if action not in ("ON", "OFF"):
+                    print("Usage: led all on|off")
+                    continue
+                send(link, f"LED ALL {action}" if action == "ON" else "RGB 0 0 0")
+                continue
+            else:
+                led_number = names.get(args[0].lower(), args[0])
+                if led_number not in ("1", "2", "3"):
+                    print("LEDs: 1/red, 2/green, 3/blue")
+                    continue
+                action = args[1].upper() if len(args) > 1 else "ON"
+                if len(args) > 2 or action not in ("ON", "OFF", "TOGGLE"):
+                    print("Usage: led 1|2|3 [on|off|toggle]")
+                    continue
+            if need_link(link):
+                if link.send(f"LED {led_number} {action}") and led_number == "1":
+                    led_state = action == "ON" if action != "TOGGLE" else not led_state
+        elif cmd in ("color", "colour"):
+            if len(args) != 1:
+                print("Usage: color off|red|green|blue|yellow|cyan|magenta|white")
+            else:
+                send(link, f"COLOR {args[0].upper()}")
+        elif cmd == "rgb":
+            if len(args) != 3 or any(value not in ("0", "1") for value in args):
+                print("Usage: rgb R G B  (each channel is 0 or 1; e.g. rgb 1 0 1)")
+            else:
+                send(link, "RGB " + " ".join(args))
+        elif cmd == "blink":
+            try:
+                if not args:
+                    led_num, count, ms = 1, 3, 200
+                elif len(args) == 2:
+                    led_num, count, ms = 1, parse_int(args[0], 1, 30), parse_int(args[1], 30, 2000)
+                elif len(args) == 3:
+                    led_num, count, ms = parse_int(args[0], 1, 3), parse_int(args[1], 1, 30), parse_int(args[2], 30, 2000)
+                else:
+                    raise ValueError
+                send(link, f"BLINK {led_num} {count} {ms}")
+            except ValueError:
+                print("Usage: blink [LED 1-3] [count 1-30] [ms 30-2000]")
+        elif cmd in ("chase", "wave", "rainbow"):
+            try:
+                cycles = parse_int(args[0], 1, 20) if args else (1 if cmd == "rainbow" else 2)
+                ms = parse_int(args[1], 30, 1500) if len(args) > 1 else 120
+                if len(args) > 2:
+                    raise ValueError
+                send(link, f"{cmd.upper()} {cycles} {ms}")
+            except ValueError:
+                print(f"Usage: {cmd} [cycles 1-20] [step-ms 30-1500]")
+        elif cmd in ("party", "siren", "alarm", "heartbeat", "countdown"):
+            try:
+                limits = {"party": (1, 10, 5), "siren": (1, 20, 3), "alarm": (1, 20, 3), "heartbeat": (1, 20, 2), "countdown": (1, 10, 3)}
+                low, high, default = limits[cmd]
+                amount = parse_int(args[0], low, high) if args else default
+                if len(args) > 1:
+                    raise ValueError
+                send(link, f"{cmd.upper()} {amount}")
+            except ValueError:
+                print(f"Usage: {cmd} [{limits[cmd][0]}-{limits[cmd][1]}]")
+        elif cmd in ("laser", "powerup", "explosion", "melody", "demo", "random", "dice", "coin", "ledtest", "glitch", "portal", "hyperspace"):
+            if args:
+                print(f"Usage: {cmd}")
+            elif cmd == "demo":
+                for action in ("POWERUP", "CHASE 2 100", "MELODY", "HEARTBEAT 1"):
+                    if not link or not link.send(action):
+                        break
+                    if action.startswith("POWERUP"):
+                        time.sleep(1.7)
+                    elif action.startswith("CHASE"):
+                        time.sleep(0.8)
+                    elif action.startswith("MELODY"):
+                        time.sleep(1.8)
+                    else:
+                        time.sleep(0.9)
+            else:
+                send(link, cmd.upper())
+        elif cmd in ("beacon", "fireworks"):
+            try:
+                maximum = 20 if cmd == "beacon" else 10
+                default = 3
+                amount = parse_int(args[0], 1, maximum) if args else default
+                if len(args) > 1:
+                    raise ValueError
+                send(link, f"{cmd.upper()} {amount}")
+            except ValueError:
+                print(f"Usage: {cmd} [count 1-{maximum}]")
+        elif cmd in ("beep", "tone"):
+            try:
+                hz = parse_int(args[0], 40, 10000) if args else 700
+                if cmd == "beep":
+                    ms = parse_int(args[1], 1, 5000) if len(args) > 1 else 300
+                    if len(args) > 2:
+                        raise ValueError
+                    send(link, f"BEEP {hz} {ms}")
+                else:
+                    if len(args) > 1:
+                        raise ValueError
+                    send(link, f"TONE {hz}")
+            except ValueError:
+                print("Usage: beep [Hz 40-10000] [ms 1-5000] | tone [Hz 40-10000]")
+        elif cmd in ("motor", "buzz"):
+            try:
+                if args and args[0].lower() == "off":
+                    if len(args) > 1:
+                        raise ValueError
+                    send(link, "MOTOR OFF")
+                else:
+                    strength = parse_int(args[0], 0, 255) if args else 180
+                    ms = parse_int(args[1], 1, 5000) if len(args) > 1 else 350
+                    if len(args) > 2:
+                        raise ValueError
+                    send(link, f"MOTOR {strength} {ms}")
+            except ValueError:
+                print("Usage: motor|buzz [strength 0-255] [ms 1-5000] or motor off")
+        elif cmd == "pulse":
+            try:
+                values = [3, 180, 100, 120]
+                for index, pair in enumerate(((1, 20), (2, 255), (3, 1000), (4, 1000))):
+                    if len(args) >= index + 1:
+                        values[index] = parse_int(args[index], pair[0], pair[1])
+                if len(args) > 4:
+                    raise ValueError
+                send(link, "PULSE " + " ".join(map(str, values)))
+            except ValueError:
+                print("Usage: pulse [count 1-20] [strength 1-255] [on-ms 20-1000] [off-ms 20-1000]")
+        elif cmd == "knob":
+            if len(args) == 0:
+                send(link, "READ")
+            elif len(args) == 1 and args[0].lower() in ("tone", "motor", "color", "off"):
+                send(link, f"KNOB {args[0].upper()}")
+            else:
+                print("Usage: knob tone|motor|color|off")
+        elif cmd == "stop":
+            send(link, "STOP")
+        elif cmd in ("reset", "panic"):
+            send(link, "RESET")
+        elif cmd == "stream":
+            if len(args) == 1 and args[0].lower() in ("on", "off"):
+                send(link, "STREAM " + args[0].upper())
+            else:
+                print("Usage: stream on|off")
+        elif cmd == "sos":
+            if need_link(link):
+                link.send_morse("SOS")
+        elif cmd == "morse":
+            if need_link(link) and args:
+                link.send_morse(" ".join(args))
+            elif not args:
+                print("Usage: morse TEXT")
+        elif cmd == "reconnect":
+            if link:
+                link.close()
+                link = None
+            try:
+                port = resolve_port(initial_port)
+                link = SerialLink(port)
+                print(f"[host] Reconnected to {port}.")
+                time.sleep(0.2)
+                link.send("PING")
+                link.send("INFO")
+            except RuntimeError as exc:
+                print(f"[connection] {exc}")
+        else:
+            print(f"Unknown command: {cmd}. Type `help`.")
+
+    if link:
+        link.send("RESET")
+        link.close()
+    print("CLM-1 closed.")
+    return 0
+
+
+def main(argv=None) -> int:
+    args = list(sys.argv[1:] if argv is None else argv)
+    if not args:
+        return shell()
+    first = args[0].lower()
+    if first in ("-h", "--help", "help"):
+        print("Usage: clm [command]\n\n  clm                  Start interactive CLM-1 console\n  clm device clm       Connect to the Code Lab Mini and start console\n  clm device           List/identify devices\n  clm scan             Scan serial ports\n  clm connect [PORT]   Connect using a specified serial port\n  clm --version        Show version\n  clm ai setup         Configure an OpenAI API key\n  clm ai create IDEA   Generate and save a custom command\n  clm custom list      List saved custom commands\n")
+        return 0
+    if first in ("-v", "--version", "version"):
+        print(f"CLM-1 {APP_VERSION}")
+        return 0
+    if first == "ai":
+        handle_ai_command(args[1:])
+        return 0
+    if first == "custom":
+        handle_custom_command(args[1:], None)
+        return 0
+    if first in ("scan", "devices", "ports"):
+        return show_devices()
+    if first == "device":
+        if len(args) == 1:
+            return show_devices()
+        if len(args) >= 2 and args[1].lower() in ("clm", "mini", "code-lab-mini"):
+            return shell()
+        if len(args) >= 2 and args[1].startswith("/dev/"):
+            return shell(args[1])
+        print("Usage: clm device [clm|/dev/ttyUSB0]")
+        return 2
+    if first in ("connect", "shell"):
+        return shell(args[1] if len(args) > 1 else None)
+    print(f"Unknown CLM-1 command: {first}. Run `clm --help`.")
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,115 @@
+CLM-1 v1.3.0 — COMMAND REFERENCE
+=================================
+
+START / CONNECTION
+  clm                         Start the interactive console
+  clm device clm              Connect to the Code Lab Mini
+  clm scan                    List serial devices
+  clm connect /dev/ttyUSB0    Connect to a selected serial port
+
+DEVICE AND CONNECTION COMMANDS
+  help                        Show all commands
+  version                     Show host and firmware protocol versions
+  device                      Show the active serial device
+  scan                        Scan serial devices
+  ping                        Check device communication
+  info                        Read firmware and MCU information
+  status                      Read button and knob inputs
+  buttons                     Alias for status
+  stream on|off               Enable or disable live input updates
+  reconnect                   Reopen the serial connection
+  echo TEXT                   Echo text through the device
+  reset                       Turn off LEDs, tone, and motor modes
+  panic                       Alias for reset
+  quit | exit                 Leave CLM-1
+
+LEDS (1=RED, 2=GREEN, 3=BLUE)
+  led 1 [on|off|toggle]       Control red LED
+  led 2 [on|off|toggle]       Control green LED
+  led 3 [on|off|toggle]       Control blue LED
+  led red|green|blue ACTION  Control an LED by color name
+  led on|off|toggle           Red LED shortcut
+  led all on|off              Control all LEDs
+  led clear                   Turn off all LEDs
+  color NAME                  off, red, green, blue, yellow, cyan, magenta, white
+  rgb R G B                   Set digital LED channels (each value is 0 or 1)
+  blink [LED] [count] [ms]    Blink an LED
+  chase [cycles] [ms]         Run a red-green-blue light chase
+  wave [cycles] [ms]          Run a back-and-forth light wave
+  rainbow [cycles] [ms]       Cycle through color combinations
+  ledtest                     Test the three LED outputs
+
+SOUND AND VIBRATION
+  beep [Hz] [ms]              Play a timed tone
+  tone [Hz]                   Start a continuous tone
+  stop                        Stop tone and vibration
+  motor [0-255] [ms]          Run vibration motor for a duration
+  buzz [0-255] [ms]            Alias for motor
+  pulse [n] [strength] [on] [off]  Pulse the vibration motor
+  sos                         Transmit Morse SOS
+  morse TEXT                  Transmit letters and digits as Morse code
+  melody                      Play an original short chiptune melody
+  metro [BPM] [beats]         Play a metronome
+
+DEVICE EFFECTS
+  party [seconds]             Random light, tone, and vibration effect
+  siren [cycles]              Alternating siren effect
+  alarm [cycles]              Alert effect
+  laser                       Descending science-fiction sound
+  powerup                     Rising power-up effect
+  explosion                   Sound and vibration effect
+  heartbeat [cycles]          Double-pulse effect
+  countdown [number]          Countdown followed by a signal
+  demo                        Run a hardware demonstration
+  glitch                      Random light and sound effect
+  beacon [cycles]              Locator beacon effect
+  portal                      Portal effect
+  fireworks [count]           Fireworks effect
+  hyperspace                  Launch effect
+  dice                        Roll a device-side die
+  coin                        Device-side coin flip
+  random                      Random light and tone
+  knob tone|motor|color|off   Assign a function to the turn knob
+
+LOCAL TERMINAL UTILITIES (NO DEVICE REQUIRED)
+  roll [sides] [count]        Roll dice in the terminal
+  rps                         Rock-paper-scissors
+  magic8 [question]           Ask the Magic 8 Ball
+  joke                        Show a programming joke
+  fortune                     Show a short fortune
+  time                        Show local date and time
+  uptime                      Show CLM-1 session uptime
+  whoami                      Show CLM-1 host and target information
+  ascii                       Display the CLM-1 logo
+  clear                       Clear the terminal
+  credits                     Show project components
+
+AI COMMAND STUDIO
+  ai setup                    Save an OpenAI API key securely
+  ai test                     Test the API connection
+  ai status                   Show AI configuration
+  ai model [MODEL]            Show or change the API model
+  ai create DESCRIPTION       Generate, preview, and save a custom command
+  ai forget                   Remove the saved API key
+
+CUSTOM COMMAND LIBRARY
+  custom list                 List saved commands
+  custom show NAME            Preview a saved command
+  custom run NAME             Run a saved command
+  custom remove NAME          Delete a saved command
+  NAME                        Run a saved command directly
+
+EXAMPLES
+  led 2 on
+  color magenta
+  rainbow 2 80
+  motor 200 450
+  morse CODE LAB MINI
+  knob tone
+  roll 20 3
+
+AI EXAMPLE
+  ai setup
+  ai test
+  ai create make a blue comet effect with five blue flashes and a high beep
+  blue_comet
