@@ -9,6 +9,30 @@ permissions:
   contents: read
 
 jobs:
+  firmware:
+    name: Compile Code Lab Mini firmware
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Arduino CLI
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | BINDIR="$HOME/.local/bin" sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install Arduino AVR platform
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install arduino:avr
+
+      - name: Compile Code Lab Mini sketch
+        run: |
+          mkdir -p "$RUNNER_TEMP/clm_firmware"
+          cp clm_firmware.ino "$RUNNER_TEMP/clm_firmware/clm_firmware.ino"
+          arduino-cli compile --fqbn arduino:avr:uno --warnings all "$RUNNER_TEMP/clm_firmware"
+
   checks:
     name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
