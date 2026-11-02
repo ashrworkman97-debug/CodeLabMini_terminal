@@ -14,6 +14,10 @@ if ! command -v python3 >/dev/null 2>&1; then
   echo "Python 3.10 or newer is required. Install Python from https://www.python.org/downloads/macos/."
   exit 1
 fi
+if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)'; then
+  echo "CLM-1 requires Python 3.10 or newer."
+  exit 1
+fi
 mkdir -p "$APP_DIR" "$BIN_DIR"
 cp "$SOURCE_DIR/clm" "$SOURCE_DIR/clm_ai.py" "$SOURCE_DIR/clm_flash.py" "$SOURCE_DIR/clm_paths.py" "$APP_DIR/"
 cp "$SOURCE_DIR/clm_firmware.ino" "$SOURCE_DIR/README.md" "$SOURCE_DIR/COMMANDS.txt" "$SOURCE_DIR/CHANGELOG.md" "$SOURCE_DIR/TERMS_OF_USE.md" "$SOURCE_DIR/requirements.txt" "$APP_DIR/"
