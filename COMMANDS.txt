@@ -1,4 +1,4 @@
-CLM-1 v1.5.0 — COMMAND REFERENCE
+CLM-1 v1.6.0 — COMMAND REFERENCE
 =================================
 
 START / CONNECTION
@@ -16,6 +16,8 @@ FIRMWARE FLASHER
 DEVICE AND CONNECTION COMMANDS
   help                        Show all commands
   version                     Show host and firmware protocol versions
+  update                      Download and install the latest CLM-1 host update
+  update check                Check GitHub for a newer host version
   device                      Show the active serial device
   scan                        Scan serial devices
   ping                        Check device communication
@@ -62,7 +64,7 @@ DEVICE EFFECTS
   siren [cycles]              Alternating siren effect
   alarm [cycles]              Alert effect
   laser                       Descending science-fiction sound
-  powerup                     Rising power-up effect
+  powerup                     Escalating charge-up, vibration crescendo, and final burst
   explosion                   Sound and vibration effect
   heartbeat [cycles]          Double-pulse effect
   countdown [number]          Countdown followed by a signal
