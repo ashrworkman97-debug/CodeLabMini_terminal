@@ -26,7 +26,7 @@ foreach ($File in @("README.md", "COMMANDS.txt", "CHANGELOG.md", "LICENSE")) {
     $Path = Join-Path $SourceDir $File
     if (Test-Path $Path -PathType Leaf) { Copy-Item -Force $Path (Join-Path $AppDir $File) }
 }
-& $VenvPython -c "import sys; raise SystemExit(0 if sys.version_info -ge (3, 10) else 1)"
+& $VenvPython -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)"
 if ($LASTEXITCODE -ne 0) { throw "CLM-1 requires Python 3.10 or newer. Install a newer Python and rerun this installer." }
 & $VenvPython -m pip install --upgrade pip
 if ($LASTEXITCODE -ne 0) { throw "Could not update pip in the CLM-1 environment." }
