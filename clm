@@ -17,7 +17,7 @@ from clm_ai import (
 )
 from clm_flash import handle_flash_command
 
-APP_VERSION = "1.4.0"
+APP_VERSION = "1.5.0"
 DEVICE_NAME = "Code Lab Mini"
 USB_VID = 0x0403
 USB_PID = 0x6015
@@ -65,7 +65,7 @@ def load_serial_modules():
         return serial, list_ports
     except ImportError:
         print("CLM-1 needs pyserial. Install it with:", file=sys.stderr)
-        print("  sudo apt install python3-serial", file=sys.stderr)
+        print("  python -m pip install pyserial", file=sys.stderr)
         raise SystemExit(2)
 
 
@@ -341,13 +341,13 @@ def resolve_port(explicit: Optional[str] = None) -> str:
         print("More than one FTDI 0403:6015 device is connected:")
         for port in matches:
             print(f"  {port.device}")
-        raise RuntimeError("Use `clm connect /dev/ttyUSBx` to choose one.")
+        raise RuntimeError("Use `clm connect PORT` to choose one (for example COM3 or /dev/cu.usbserial-*).")
     if len(ports) == 1:
         return ports[0].device
     if ports:
         show_devices()
-        raise RuntimeError("Couldn't identify the Code Lab Mini. Specify its /dev/ttyUSB port.")
-    raise RuntimeError("No serial ports found. Plug in the Mini and share its USB device with Linux.")
+        raise RuntimeError("Couldn't identify the Code Lab Mini. Specify its serial port (for example COM3).")
+    raise RuntimeError("No serial ports found. Plug in the Mini and check the USB cable and operating-system permissions.")
 
 
 def need_link(link: Optional[SerialLink]) -> bool:
@@ -756,9 +756,9 @@ def main(argv=None) -> int:
             return show_devices()
         if len(args) >= 2 and args[1].lower() in ("clm", "mini", "code-lab-mini"):
             return shell()
-        if len(args) >= 2 and args[1].startswith("/dev/"):
+        if len(args) >= 2 and args[1].lower() not in ("clm", "mini", "code-lab-mini"):
             return shell(args[1])
-        print("Usage: clm device [clm|/dev/ttyUSB0]")
+        print("Usage: clm device [clm|PORT]")
         return 2
     if first in ("connect", "shell"):
         return shell(args[1] if len(args) > 1 else None)
