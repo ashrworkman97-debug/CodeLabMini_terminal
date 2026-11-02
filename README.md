@@ -15,13 +15,14 @@ CLM-1 is an open-source command-line toolkit for the **Let's Start Coding Code L
 - Control the vibration motor and read the buttons and analog knob.
 - Run built-in light shows, alerts, games, and terminal utilities.
 - Optionally generate reusable hardware macros through the OpenAI API.
-- Use the project on Linux, including the Linux development environment on ChromeOS.
+- Use the project on Windows 10/11, macOS, Linux, and ChromeOS Linux.
 
 ## Contents
 
 - [Requirements](#requirements)
 - [Hardware map](#hardware-map)
 - [Install CLM-1](#install-clm-1)
+- [Windows and macOS](#windows-and-macos)
 - [Install firmware](#install-or-update-the-mini-firmware-without-the-browser-editor)
 - [Connect on ChromeOS](#connect-from-chromeos)
 - [Quick start](#quick-start)
@@ -72,33 +73,62 @@ The firmware communicates over USB serial at **9600 baud** using newline-termina
 
 ## Install CLM-1
 
-Clone the repository:
+First, install **Python 3.10 or newer**. Then clone the repository:
 
 ```bash
 git clone https://github.com/ashrworkman97-debug/CodeLabMini_terminal.git
 cd CodeLabMini_terminal
 ```
 
-Run the user-level installer:
+### Linux and ChromeOS
+
+On Debian, Ubuntu, or ChromeOS Linux, install the serial dependency and run the user-level installer:
 
 ```bash
+sudo apt update
+sudo apt install python3 python3-serial
 bash install.sh
 source ~/.bashrc
 ```
 
-The installer places the application in `~/.local/bin`, its supporting Python module beside it, and the firmware/reference files in `~/.local/share/clm-1`. It adds `~/.local/bin` to `~/.bashrc` and creates that file if it does not exist. Because `bash install.sh` runs in a separate process, reload the PATH in your current terminal with `source ~/.bashrc`, or open a new terminal.
+Launch the console with `clm`, or connect immediately with `clm device clm`.
 
-Start the console:
+### Windows 10/11
+
+Open PowerShell in the cloned repository folder. If needed, install Python 3.10+ from [python.org](https://www.python.org/downloads/windows/) and enable the Python launcher (`py`). Run:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\install_windows.ps1
+```
+
+The installer creates an isolated Python environment, installs pyserial, and adds per-user `clm` and `clm_h@cker_init` commands. Open a **new** PowerShell or Windows Terminal window after installation, then run:
+
+```powershell
+clm
+clm scan
+clm connect COM3
+```
+
+Use the COM port shown by `clm scan`; it may not be COM3. No administrator access is required. If Windows does not expose the Mini as a serial port, install the appropriate FTDI VCP driver from [FTDI](https://ftdichip.com/drivers/).
+
+### macOS
+
+Install Python 3.10+ from [python.org](https://www.python.org/downloads/macos/) if it is not already available. In Terminal, clone the repository and run:
+
+```bash
+bash install_macos.sh
+```
+
+The installer creates an isolated Python environment and adds `clm` and `clm_h@cker_init` to `~/.local/bin`. Open a new Terminal window (or run `export PATH="$HOME/.local/bin:$PATH"`) and launch:
 
 ```bash
 clm
+clm scan
+clm connect /dev/cu.usbserial-XXXX
 ```
 
-To start and attempt to connect to the Mini immediately:
-
-```bash
-clm device clm
-```
+The serial device name varies; use the exact path reported by `clm scan`. macOS may require an FTDI VCP driver depending on the operating-system version and USB interface.
 
 ## Install or update the Mini firmware without the browser editor
 
@@ -220,13 +250,13 @@ The offline test suite does not need a connected Mini or an OpenAI API key:
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 -m py_compile clm clm_ai.py
-bash -n install.sh
+python3 -m py_compile clm clm_ai.py clm_flash.py clm_paths.py
+bash -n install.sh install_macos.sh
 python3 clm --version
 python3 clm --help
 ```
 
-GitHub Actions runs these checks on Python 3.10, 3.11, 3.12, and 3.13. Firmware compilation and physical-device behavior still need to be checked with a compatible Arduino toolchain and real hardware.
+GitHub Actions runs the Python checks on Linux, Windows, and macOS with Python 3.10, 3.11, 3.12, and 3.13. Firmware compilation runs on Linux. Firmware compilation and physical-device behavior still need to be checked with a compatible Arduino toolchain and real hardware.
 
 ## Troubleshooting
 
