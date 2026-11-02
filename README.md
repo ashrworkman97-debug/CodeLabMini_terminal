@@ -31,6 +31,7 @@ CLM-1 is an open-source command-line toolkit for the **Let's Start Coding Code L
 - [Troubleshooting](#troubleshooting)
 - [Security](#security-and-privacy)
 - [Contributing](#contributing)
+- [Terms of use](TERMS_OF_USE.md)
 - [License](#license)
 
 ## Requirements
@@ -40,7 +41,7 @@ CLM-1 is an open-source command-line toolkit for the **Let's Start Coding Code L
 - Python 3.10 or newer.
 - `pyserial` 3.5 or newer.
 - Permission to access the USB serial device.
-- An Arduino-compatible toolchain for installing firmware.
+- Arduino CLI for direct firmware flashing (optional for normal terminal control).
 
 On Debian, Ubuntu, or ChromeOS Linux, install the runtime dependency with:
 
@@ -99,16 +100,35 @@ To start and attempt to connect to the Mini immediately:
 clm device clm
 ```
 
-## Install the Mini firmware
+## Install or update the Mini firmware without the browser editor
 
 The host application and controller firmware are separate. Updating CLM-1 on the Chromebook does **not** automatically update the firmware on the Mini.
 
-1. Open `clm_firmware.ino` in an Arduino-compatible editor.
-2. Select the board/profile and serial port appropriate for your Code Lab Mini.
-3. Compile and upload the sketch.
-4. Close the editor's Serial Monitor before starting CLM-1; only one application can normally own the serial port at a time.
+CLM-1 includes `clm_h@cker_init`, a local Arduino CLI flasher. It compiles the bundled sketch and uploads the resulting HEX directly through the Mini's USB-to-serial bootloader. It does not open the manufacturer's website or browser editor, burn a new bootloader, or change chip fuses.
 
-The installer copies the sketch to `~/.local/share/clm-1/clm_firmware.ino`.
+Install [Arduino CLI](https://arduino.github.io/arduino-cli/latest/installation/) once and make sure `arduino-cli` is on your PATH. The first run can offer to download/install the Arduino AVR platform if it is missing.
+
+Inside CLM-1, connect the Mini and run:
+
+```text
+CLM-1> clm_h@cker_init
+```
+
+The command automatically selects a single FTDI device with VID:PID `0403:6015`. It compiles first, shows the exact port and board profile, and only uploads after you type `FLASH`. If more than one Mini is connected, select one explicitly:
+
+```text
+CLM-1> clm_h@cker_init --port /dev/ttyUSB0
+```
+
+To check that the firmware compiles without changing any device:
+
+```text
+CLM-1> clm_h@cker_init --compile-only
+```
+
+The default board profile is `arduino:avr:uno`, based on the manufacturer's description of the ATmega328P as similar to the Arduino Uno. This assumes an Uno-compatible 16 MHz serial bootloader; the public product specifications do not identify every bootloader detail or hardware revision. Confirm that your Mini uses compatible bootloader settings before authorizing an upload. Use `--fqbn` only when you know the correct alternative profile. The command never attempts to burn or repair a bootloader.
+
+The installer copies the sketch to `~/.local/share/clm-1/clm_firmware.ino` and the uploader module alongside the CLM-1 application.
 
 ## Connect from ChromeOS
 
@@ -249,7 +269,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and the GitHub pull request template befo
 
 ## License
 
-CLM-1 is distributed under the **Mozilla Public License 2.0**. See [LICENSE](LICENSE) for the complete license text.
+CLM-1 is distributed under the **Mozilla Public License 2.0**. See [LICENSE](LICENSE) for the complete license text. Review [TERMS_OF_USE.md](TERMS_OF_USE.md) for the hardware-risk terms before flashing.
 
 ---
 
