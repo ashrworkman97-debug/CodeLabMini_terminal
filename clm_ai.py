@@ -456,6 +456,7 @@ RESERVED_COMMANDS = {
     "beep", "tone", "stop", "motor", "buzz", "pulse", "knob", "sos", "morse",
     "reset", "panic", "quit", "exit", "clear", "ascii", "joke", "fortune", "magic8",
     "time", "uptime", "whoami", "credits", "roll", "rps", "ai", "custom", "run",
+    "clm_h@cker_init",
 }
 
 
