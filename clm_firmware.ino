@@ -154,12 +154,29 @@ void doLaser() {
 }
 
 void doPowerup() {
+  // Charge-up: cycle the three LEDs while the pitch and vibration build.
   const uint8_t masks[3] = {1, 2, 4};
-  for (uint8_t i = 0; i < 12; ++i) {
+  for (uint8_t i = 0; i < 18; ++i) {
     setMask(masks[i % 3]);
-    beepBlocking(260 + i * 115, 65);
+    unsigned int frequency = 220 + (unsigned int)i * 78;
+    tone(SPEAKER_PIN, frequency);
+    analogWrite(MOTOR_PIN, (uint8_t)(35 + i * 11));
+    delay((unsigned int)(115 - i * 4));
   }
-  setMask(7); beepBlocking(1500, 170); setMask(0);
+
+  // Hold at full charge, then release with a bright burst.
+  noTone(SPEAKER_PIN);
+  analogWrite(MOTOR_PIN, 0);
+  setMask(7);
+  beepBlocking(1760, 120);
+  setMotor(230, 180);
+  delay(180);
+  stopMotorNow();
+  setMask(0);
+  delay(90);
+  setMask(7);
+  beepBlocking(2100, 260);
+  setMask(0);
   Serial.println(F("OK POWERUP"));
 }
 
