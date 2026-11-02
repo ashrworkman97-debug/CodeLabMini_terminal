@@ -7,6 +7,12 @@ START / CONNECTION
   clm scan                    List serial devices
   clm connect /dev/ttyUSB0    Connect to a selected serial port
 
+FIRMWARE FLASHER
+  clm_h@cker_init                 Compile and flash bundled CLM-1 firmware
+  clm_h@cker_init --port PORT     Select a specific serial port
+  clm_h@cker_init --compile-only  Compile only; do not upload
+  (Requires arduino-cli. Upload requires typing FLASH to confirm.)
+
 DEVICE AND CONNECTION COMMANDS
   help                        Show all commands
   version                     Show host and firmware protocol versions
