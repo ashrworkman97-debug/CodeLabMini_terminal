@@ -15,6 +15,7 @@ CLM-1 is an open-source command-line toolkit for the **Let's Start Coding Code L
 - Control the vibration motor and read the buttons and analog knob.
 - Run built-in light shows, alerts, games, and terminal utilities.
 - Optionally generate reusable hardware macros through the OpenAI API.
+- Check GitHub for CLM-1 updates automatically at startup, with a one-command self-updater.
 - Use the project on Windows 10/11, macOS, Linux, and ChromeOS Linux.
 
 ## Contents
@@ -91,7 +92,7 @@ bash install.sh
 source ~/.bashrc
 ```
 
-Launch the console with `clm`, or connect immediately with `clm device clm`.
+Launch the console with `clm`, or connect immediately with `clm device clm`. CLM-1 quietly checks GitHub for a newer host version at startup (at most once per day). If one is available, run `clm update` to download and install it, then close and reopen CLM-1. Use `clm update check` to check manually. This updates the host software; firmware updates still require `clm_h@cker_init`.
 
 ### Windows and macOS
 
@@ -212,7 +213,7 @@ Leave the console with `quit` or `exit`.
 
 Use `help` inside CLM-1 for the built-in help. The full reference is in [COMMANDS.txt](COMMANDS.txt).
 
-**Connection and device:** `help`, `version`, `device`, `scan`, `ping`, `info`, `status`, `buttons`, `stream`, `reconnect`, `echo`, `reset`, `panic`, `quit`.
+**Connection and device:** `help`, `version`, `update`, `device`, `scan`, `ping`, `info`, `status`, `buttons`, `stream`, `reconnect`, `echo`, `reset`, `panic`, `quit`.
 
 **LEDs and effects:** `led`, `color`, `rgb`, `blink`, `chase`, `wave`, `rainbow`, `ledtest`.
 
