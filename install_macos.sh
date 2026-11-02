@@ -3,8 +3,8 @@ set -euo pipefail
 SOURCE_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_DIR="$HOME/Library/Application Support/CLM-1"
 BIN_DIR="$HOME/.local/bin"
-VERSION="1.5.0"
-for required_file in clm clm_ai.py clm_flash.py clm_paths.py clm_firmware.ino TERMS_OF_USE.md requirements.txt; do
+VERSION="1.6.0"
+for required_file in clm clm_ai.py clm_flash.py clm_paths.py clm_update.py clm_firmware.ino TERMS_OF_USE.md requirements.txt; do
   if [[ ! -f "$SOURCE_DIR/$required_file" ]]; then
     printf 'Error: required project file is missing: %s\n' "$required_file" >&2
     exit 1
@@ -19,7 +19,7 @@ if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) e
   exit 1
 fi
 mkdir -p "$APP_DIR" "$BIN_DIR"
-cp "$SOURCE_DIR/clm" "$SOURCE_DIR/clm_ai.py" "$SOURCE_DIR/clm_flash.py" "$SOURCE_DIR/clm_paths.py" "$APP_DIR/"
+cp "$SOURCE_DIR/clm" "$SOURCE_DIR/clm_ai.py" "$SOURCE_DIR/clm_flash.py" "$SOURCE_DIR/clm_paths.py" "$SOURCE_DIR/clm_update.py" "$APP_DIR/"
 cp "$SOURCE_DIR/clm_firmware.ino" "$SOURCE_DIR/README.md" "$SOURCE_DIR/COMMANDS.txt" "$SOURCE_DIR/CHANGELOG.md" "$SOURCE_DIR/TERMS_OF_USE.md" "$SOURCE_DIR/requirements.txt" "$APP_DIR/"
 if [[ ! -x "$APP_DIR/.venv/bin/python" ]]; then python3 -m venv "$APP_DIR/.venv"; fi
 "$APP_DIR/.venv/bin/python" -m pip install --upgrade pip
