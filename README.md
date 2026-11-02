@@ -22,7 +22,7 @@ CLM-1 is an open-source command-line toolkit for the **Let's Start Coding Code L
 - [Requirements](#requirements)
 - [Hardware map](#hardware-map)
 - [Install CLM-1](#install-clm-1)
-- [Install firmware](#install-the-mini-firmware)
+- [Install firmware](#install-or-update-the-mini-firmware-without-the-browser-editor)
 - [Connect on ChromeOS](#connect-from-chromeos)
 - [Quick start](#quick-start)
 - [Command groups](#command-groups)
