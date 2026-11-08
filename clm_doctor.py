@@ -12,18 +12,22 @@ USB_PID = 0x6015
 
 @dataclass(frozen=True)
 class Diagnostic:
+    """One setup-check result with a severity, label, and explanatory detail."""
+
     status: str
     name: str
     detail: str
 
 
 def _load_serial():
+    """Import pySerial lazily so diagnostics can report a missing dependency."""
     import serial
     from serial.tools import list_ports
     return serial, list_ports
 
 
 def _find_firmware():
+    """Locate the bundled firmware sketch using the installer's shared logic."""
     from clm_flash import find_firmware
     return find_firmware()
 
