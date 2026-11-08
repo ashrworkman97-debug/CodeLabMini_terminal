@@ -3,6 +3,7 @@ import builtins
 import contextlib
 import importlib
 import io
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
@@ -18,8 +19,8 @@ def fake_port(device="/dev/ttyUSB0", vid=0x0403, pid=0x6015):
 class DoctorTests(unittest.TestCase):
     def test_cli_import_and_update_path_survive_missing_doctor_module(self):
         """A 1.6.0 updater may replace the CLI before copying clm_doctor.py."""
-        import clm
-
+        repository_root = str(Path(__file__).resolve().parents[1])
+        sys.path.insert(0, repository_root)
         real_import = builtins.__import__
 
         def import_without_doctor(name, *args, **kwargs):
@@ -30,11 +31,12 @@ class DoctorTests(unittest.TestCase):
         output = io.StringIO()
         try:
             with patch("builtins.__import__", side_effect=import_without_doctor):
-                importlib.reload(clm)
+                clm = importlib.import_module("clm")
                 with contextlib.redirect_stdout(output):
                     self.assertEqual(clm.run_doctor(), 1)
         finally:
-            importlib.reload(clm)
+            sys.modules.pop("clm", None)
+            sys.path.remove(repository_root)
 
         self.assertIn("Run `clm update` once more", output.getvalue())
 
