@@ -4,9 +4,9 @@ set -euo pipefail
 SOURCE_DIR="$(cd "$(dirname "$0")" && pwd)"
 BIN_DIR="$HOME/.local/bin"
 DATA_DIR="$HOME/.local/share/clm-1"
-VERSION="1.6.0"
+VERSION="1.7.0"
 
-for required_file in clm clm_ai.py clm_flash.py clm_paths.py clm_update.py clm_firmware.ino TERMS_OF_USE.md; do
+for required_file in clm clm_ai.py clm_flash.py clm_paths.py clm_doctor.py clm_update.py clm_firmware.ino TERMS_OF_USE.md; do
   if [[ ! -f "$SOURCE_DIR/$required_file" ]]; then
     printf 'Error: required project file is missing: %s\n' "$SOURCE_DIR/$required_file" >&2
     exit 1
@@ -18,6 +18,7 @@ install -m 0755 "$SOURCE_DIR/clm" "$BIN_DIR/clm"
 install -m 0644 "$SOURCE_DIR/clm_ai.py" "$BIN_DIR/clm_ai.py"
 install -m 0644 "$SOURCE_DIR/clm_flash.py" "$BIN_DIR/clm_flash.py"
 install -m 0644 "$SOURCE_DIR/clm_paths.py" "$BIN_DIR/clm_paths.py"
+install -m 0644 "$SOURCE_DIR/clm_doctor.py" "$BIN_DIR/clm_doctor.py"
 install -m 0644 "$SOURCE_DIR/clm_update.py" "$BIN_DIR/clm_update.py"
 install -m 0644 "$SOURCE_DIR/clm_firmware.ino" "$DATA_DIR/clm_firmware.ino"
 install -m 0644 "$SOURCE_DIR/README.md" "$DATA_DIR/README.md"
