@@ -16,7 +16,7 @@ from clm_paths import APP_DIR, CONFIG_DIR
 REPO = "ashrworkman97-debug/CodeLabMini_terminal"
 RAW_CLI = f"https://raw.githubusercontent.com/{REPO}/main/clm"
 ARCHIVE = f"https://codeload.github.com/{REPO}/zip/refs/heads/main"
-CORE_FILES = ("clm", "clm_ai.py", "clm_flash.py", "clm_paths.py", "clm_update.py")
+CORE_FILES = ("clm", "clm_ai.py", "clm_flash.py", "clm_paths.py", "clm_doctor.py", "clm_update.py")
 DATA_FILES = ("clm_firmware.ino", "README.md", "COMMANDS.txt", "CHANGELOG.md",
               "TERMS_OF_USE.md", "requirements.txt", "install.sh",
               "install_macos.sh", "install_windows.ps1")
