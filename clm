@@ -16,7 +16,6 @@ from clm_ai import (
     handle_ai_command, handle_custom_command, load_commands, run_custom_command,
 )
 from clm_flash import handle_flash_command
-from clm_doctor import run_doctor
 from clm_update import check_for_update, install_update
 
 APP_VERSION = "1.7.0"
@@ -25,6 +24,21 @@ USB_VID = 0x0403
 USB_PID = 0x6015
 DEFAULT_BAUD = 9600
 FIRMWARE_VERSION = "1.3.0"
+
+
+def run_doctor() -> int:
+    """Run setup diagnostics while remaining compatible with 1.6.0 self-updates."""
+    try:
+        from clm_doctor import run_doctor as doctor
+    except ModuleNotFoundError as exc:
+        if exc.name != "clm_doctor":
+            raise
+        print(
+            "[doctor] The diagnostics module is missing from this installation. "
+            "Run `clm update` once more to finish the 1.7.0 upgrade, then retry."
+        )
+        return 1
+    return doctor()
 
 MORSE = {
     "A": ".-", "B": "-...", "C": "-.-.", "D": "-..", "E": ".",
