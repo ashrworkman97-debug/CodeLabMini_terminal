@@ -2,12 +2,6 @@
 
 Notable changes to CLM-1 are documented here.
 
-## 1.7.0 — Setup Diagnostics
-
-- Added `clm doctor`, a read-only diagnostic report for Python, pySerial, USB serial visibility, Arduino CLI, and the bundled firmware sketch.
-- Added offline tests for connected, disconnected, and incomplete local setups.
-- Added the diagnostic module to Linux, Windows, macOS, and self-updater installs.
-
 ## 1.4.0 — Direct Firmware Flashing
 
 - Added `clm_h@cker_init` for local Arduino CLI compilation and USB-serial firmware uploads.
@@ -30,6 +24,12 @@ Notable changes to CLM-1 are documented here.
 - Reworked POWERUP into a longer charging sequence with escalating pitch, LED cycling, vibration crescendo, and a final burst.
 - Added a quiet automatic GitHub update check at startup and a `clm update` self-updater.
 - Added `clm update check` for a manual version check.
+
+## 1.7.0 — Setup Diagnostics
+
+- Added `clm doctor`, a read-only diagnostic report for Python, pySerial, USB serial visibility, Arduino CLI, and the bundled firmware sketch.
+- Added offline tests for connected, disconnected, and incomplete local setups.
+- Added the diagnostic module to Linux, Windows, macOS, and self-updater installs.
 
 ## Unreleased
 
