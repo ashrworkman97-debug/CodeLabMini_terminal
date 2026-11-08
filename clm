@@ -16,9 +16,10 @@ from clm_ai import (
     handle_ai_command, handle_custom_command, load_commands, run_custom_command,
 )
 from clm_flash import handle_flash_command
+from clm_doctor import run_doctor
 from clm_update import check_for_update, install_update
 
-APP_VERSION = "1.6.0"
+APP_VERSION = "1.7.0"
 DEVICE_NAME = "Code Lab Mini"
 USB_VID = 0x0403
 USB_PID = 0x6015
@@ -242,6 +243,7 @@ DEVICE / CONNECTION
   version                 Show CLM-1 version
   update                  Download and install the latest CLM-1 update
   update check            Check GitHub for a newer version
+  doctor                  Diagnose the local CLM-1 setup (read-only)
   device                  Show active USB serial device
   scan                    Scan serial ports
   ping                    Check whether firmware responds
@@ -491,6 +493,12 @@ def shell(initial_port: Optional[str] = None) -> int:
                 install_update()
             else:
                 print("Usage: update [check]")
+            continue
+        if cmd == "doctor":
+            if args:
+                print("Usage: doctor")
+            else:
+                run_doctor()
             continue
         if cmd == "ai":
             handle_ai_command(args)
@@ -747,8 +755,13 @@ def main(argv=None) -> int:
         return shell()
     first = args[0].lower()
     if first in ("-h", "--help", "help"):
-        print("Usage: clm [command]\n\n  clm                  Start interactive CLM-1 console\n  clm device clm       Connect to the Code Lab Mini and start console\n  clm device           List/identify devices\n  clm scan             Scan serial ports\n  clm connect [PORT]   Connect using a specified serial port\n  clm_h@cker_init     Compile and flash bundled firmware\n  clm_h@cker_init --compile-only  Compile without uploading\n  clm --version        Show version\n  clm update           Download and install the latest host update\n  clm update check     Check GitHub for a newer version\n  clm ai setup         Configure an OpenAI API key\n  clm ai create IDEA   Generate and save a custom command\n  clm custom list      List saved custom commands\n")
+        print("Usage: clm [command]\n\n  clm                  Start interactive CLM-1 console\n  clm device clm       Connect to the Code Lab Mini and start console\n  clm device           List/identify devices\n  clm scan             Scan serial ports\n  clm connect [PORT]   Connect using a specified serial port\n  clm_h@cker_init     Compile and flash bundled firmware\n  clm_h@cker_init --compile-only  Compile without uploading\n  clm --version        Show version\n  clm update           Download and install the latest host update\n  clm update check     Check GitHub for a newer version\n  clm doctor           Diagnose the local setup (read-only)\n  clm ai setup         Configure an OpenAI API key\n  clm ai create IDEA   Generate and save a custom command\n  clm custom list      List saved custom commands\n")
         return 0
+    if first == "doctor":
+        if len(args) != 1:
+            print("Usage: clm doctor")
+            return 2
+        return run_doctor()
     if first == "update":
         if len(args) == 2 and args[1].lower() == "check":
             check_for_update(APP_VERSION, silent=False, force=True)
