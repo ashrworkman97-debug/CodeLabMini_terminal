@@ -1,4 +1,7 @@
 """Offline tests for the CLM-1 setup diagnostics."""
+import builtins
+import contextlib
+import importlib
 import io
 from pathlib import Path
 from types import SimpleNamespace
@@ -13,6 +16,28 @@ def fake_port(device="/dev/ttyUSB0", vid=0x0403, pid=0x6015):
 
 
 class DoctorTests(unittest.TestCase):
+    def test_cli_import_and_update_path_survive_missing_doctor_module(self):
+        """A 1.6.0 updater may replace the CLI before copying clm_doctor.py."""
+        import clm
+
+        real_import = builtins.__import__
+
+        def import_without_doctor(name, *args, **kwargs):
+            if name == "clm_doctor":
+                raise ModuleNotFoundError("missing during legacy upgrade", name="clm_doctor")
+            return real_import(name, *args, **kwargs)
+
+        output = io.StringIO()
+        try:
+            with patch("builtins.__import__", side_effect=import_without_doctor):
+                importlib.reload(clm)
+                with contextlib.redirect_stdout(output):
+                    self.assertEqual(clm.run_doctor(), 1)
+        finally:
+            importlib.reload(clm)
+
+        self.assertIn("Run `clm update` once more", output.getvalue())
+
     def setUp(self):
         self.serial = SimpleNamespace(__version__="3.5.0")
 
