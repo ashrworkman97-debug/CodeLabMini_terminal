@@ -18,9 +18,10 @@ def fake_port(device="/dev/ttyUSB0", vid=0x0403, pid=0x6015):
 
 
 class DoctorTests(unittest.TestCase):
+    """Verify diagnostic output and legacy-upgrade behavior without hardware."""
+
     def test_cli_import_and_update_path_survive_missing_doctor_module(self):
-        """Keep the command usable when a legacy updater has not copied the module."""
-        """A 1.6.0 updater may replace the CLI before copying clm_doctor.py."""
+        """Keep the command usable when a 1.6.0 updater has not copied clm_doctor.py."""
         cli_path = Path(__file__).resolve().parents[1] / "clm"
         real_import = builtins.__import__
 
