@@ -27,7 +27,7 @@ Notable changes to CLM-1 are documented here.
 
 ## 1.7.0 — Setup Diagnostics
 
-- Added `clm doctor`, a read-only diagnostic report for Python, pySerial, USB serial visibility, Arduino CLI, and the bundled firmware sketch.
+- Added `clm doctor`, a read-only diagnostic report for Python, pySerial, USB serial visibility, Arduino CLI, and the bundled firmware sketch; `--json` provides a versioned report for scripts.
 - Added offline tests for connected, disconnected, and incomplete local setups.
 - Added the diagnostic module to Linux, Windows, macOS, and self-updater installs.
 

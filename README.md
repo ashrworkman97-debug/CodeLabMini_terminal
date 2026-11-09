@@ -16,7 +16,7 @@ CLM-1 is an open-source command-line toolkit for the **Let's Start Coding Code L
 - Run built-in light shows, alerts, games, and terminal utilities.
 - Optionally generate reusable hardware macros through the OpenAI API.
 - Check GitHub for CLM-1 updates automatically at startup, with a one-command self-updater.
-- Run a read-only setup diagnosis with `clm doctor` before troubleshooting USB or firmware flashing.
+- Run a read-only setup diagnosis with `clm doctor` before troubleshooting USB or firmware flashing, or use `clm doctor --json` for scripts.
 - Use the project on Windows 10/11, macOS, Linux, and ChromeOS Linux.
 
 ## Contents
@@ -195,7 +195,7 @@ Before connecting, run the read-only setup check from your terminal:
 clm doctor
 ```
 
-It checks Python, pySerial, visible USB serial ports, the optional Arduino CLI, and the bundled firmware sketch. It does not contact or change the Mini.
+It checks Python, pySerial, visible USB serial ports, the optional Arduino CLI, and the bundled firmware sketch. It does not contact or change the Mini. Add `--json` to print a versioned JSON report with per-check details, summary counts, and an exit code for scripts.
 
 Once connected, try these commands inside the CLM-1 prompt:
 
@@ -264,6 +264,7 @@ The offline test suite does not need a connected Mini or an OpenAI API key:
 python3 -m unittest discover -s tests -v
 python3 -m py_compile clm clm_ai.py clm_flash.py clm_paths.py clm_doctor.py
 python3 clm doctor
+python3 clm doctor --json
 bash -n install.sh install_macos.sh
 python3 clm --version
 python3 clm --help

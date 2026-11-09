@@ -3,6 +3,7 @@ import builtins
 import contextlib
 import runpy
 import io
+import json
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
@@ -84,6 +85,43 @@ class DoctorTests(unittest.TestCase):
         checks = self.collect(python_version=(3, 9, 9))
         python_check = next(check for check in checks if check.name == "Python")
         self.assertEqual(python_check.status, "FAIL")
+
+    def test_json_report_is_machine_readable_and_has_a_stable_summary(self):
+        checks = [
+            clm_doctor.Diagnostic("OK", "Python", "3.13.0"),
+            clm_doctor.Diagnostic("WARN", "Code Lab Mini", "Not connected."),
+            clm_doctor.Diagnostic("INFO", "Arduino CLI", "Optional."),
+        ]
+        output = io.StringIO()
+        with patch.object(clm_doctor, "collect_diagnostics", return_value=checks):
+            result = clm_doctor.run_doctor(output, json_output=True)
+
+        report = json.loads(output.getvalue())
+        self.assertEqual(result, 0)
+        self.assertEqual(report["schema_version"], 1)
+        self.assertEqual(report["summary"], {"ok": 1, "warn": 1, "info": 1, "fail": 0})
+        self.assertEqual(report["exit_code"], 0)
+        self.assertEqual(report["checks"][0], {
+            "status": "OK", "name": "Python", "detail": "3.13.0",
+        })
+
+    def test_json_report_returns_nonzero_for_required_failures(self):
+        checks = [clm_doctor.Diagnostic("FAIL", "pySerial", "Not installed.")]
+        output = io.StringIO()
+        with patch.object(clm_doctor, "collect_diagnostics", return_value=checks):
+            result = clm_doctor.run_doctor(output, json_output=True)
+
+        report = json.loads(output.getvalue())
+        self.assertEqual(result, 1)
+        self.assertEqual(report["summary"]["fail"], 1)
+        self.assertEqual(report["exit_code"], 1)
+
+    def test_cli_accepts_doctor_json_option(self):
+        cli_path = Path(__file__).resolve().parents[1] / "clm"
+        namespace = runpy.run_path(str(cli_path))
+        with patch.object(clm_doctor, "run_doctor", return_value=0) as doctor:
+            self.assertEqual(namespace["main"](["doctor", "--json"]), 0)
+        doctor.assert_called_once_with(json_output=True)
 
     def test_doctor_prints_a_summary_and_returns_success_with_only_warnings(self):
         output = io.StringIO()

@@ -79,3 +79,4 @@ jobs:
           python clm --version
           python clm --help
           python clm doctor
+          python clm doctor --json

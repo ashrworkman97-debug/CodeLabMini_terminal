@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import datetime as _datetime
 import queue
 import random
@@ -26,19 +27,28 @@ DEFAULT_BAUD = 9600
 FIRMWARE_VERSION = "1.3.0"
 
 
-def run_doctor() -> int:
+def run_doctor(json_output: bool = False) -> int:
     """Run setup diagnostics while remaining compatible with 1.6.0 self-updates."""
     try:
         from clm_doctor import run_doctor as doctor
     except ModuleNotFoundError as exc:
         if exc.name != "clm_doctor":
             raise
-        print(
-            "[doctor] The diagnostics module is missing from this installation. "
+        message = (
+            "The diagnostics module is missing from this installation. "
             "Run `clm update` once more to finish the 1.7.0 upgrade, then retry."
         )
+        if json_output:
+            print(json.dumps({
+                "schema_version": 1,
+                "checks": [{"status": "FAIL", "name": "Diagnostics module", "detail": message}],
+                "summary": {"ok": 0, "warn": 0, "info": 0, "fail": 1},
+                "exit_code": 1,
+            }, indent=2))
+        else:
+            print(f"[doctor] {message}")
         return 1
-    return doctor()
+    return doctor(json_output=json_output)
 
 MORSE = {
     "A": ".-", "B": "-...", "C": "-.-.", "D": "-..", "E": ".",
@@ -257,7 +267,7 @@ DEVICE / CONNECTION
   version                 Show CLM-1 version
   update                  Download and install the latest CLM-1 update
   update check            Check GitHub for a newer version
-  doctor                  Diagnose the local CLM-1 setup (read-only)
+  doctor [--json]         Diagnose the local CLM-1 setup (read-only)
   device                  Show active USB serial device
   scan                    Scan serial ports
   ping                    Check whether firmware responds
@@ -509,10 +519,12 @@ def shell(initial_port: Optional[str] = None) -> int:
                 print("Usage: update [check]")
             continue
         if cmd == "doctor":
-            if args:
-                print("Usage: doctor")
-            else:
+            if not args:
                 run_doctor()
+            elif len(args) == 1 and args[0].lower() == "--json":
+                run_doctor(json_output=True)
+            else:
+                print("Usage: doctor [--json]")
             continue
         if cmd == "ai":
             handle_ai_command(args)
@@ -769,13 +781,13 @@ def main(argv=None) -> int:
         return shell()
     first = args[0].lower()
     if first in ("-h", "--help", "help"):
-        print("Usage: clm [command]\n\n  clm                  Start interactive CLM-1 console\n  clm device clm       Connect to the Code Lab Mini and start console\n  clm device           List/identify devices\n  clm scan             Scan serial ports\n  clm connect [PORT]   Connect using a specified serial port\n  clm_h@cker_init     Compile and flash bundled firmware\n  clm_h@cker_init --compile-only  Compile without uploading\n  clm --version        Show version\n  clm update           Download and install the latest host update\n  clm update check     Check GitHub for a newer version\n  clm doctor           Diagnose the local setup (read-only)\n  clm ai setup         Configure an OpenAI API key\n  clm ai create IDEA   Generate and save a custom command\n  clm custom list      List saved custom commands\n")
+        print("Usage: clm [command]\n\n  clm                  Start interactive CLM-1 console\n  clm device clm       Connect to the Code Lab Mini and start console\n  clm device           List/identify devices\n  clm scan             Scan serial ports\n  clm connect [PORT]   Connect using a specified serial port\n  clm_h@cker_init     Compile and flash bundled firmware\n  clm_h@cker_init --compile-only  Compile without uploading\n  clm --version        Show version\n  clm update           Download and install the latest host update\n  clm update check     Check GitHub for a newer version\n  clm doctor [--json]  Diagnose the local setup (read-only)\n  clm ai setup         Configure an OpenAI API key\n  clm ai create IDEA   Generate and save a custom command\n  clm custom list      List saved custom commands\n")
         return 0
     if first == "doctor":
-        if len(args) != 1:
-            print("Usage: clm doctor")
+        if len(args) > 2 or (len(args) == 2 and args[1].lower() != "--json"):
+            print("Usage: clm doctor [--json]")
             return 2
-        return run_doctor()
+        return run_doctor(json_output=len(args) == 2)
     if first == "update":
         if len(args) == 2 and args[1].lower() == "check":
             check_for_update(APP_VERSION, silent=False, force=True)

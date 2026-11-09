@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 import shutil
 import sys
 
@@ -103,21 +104,34 @@ def collect_diagnostics() -> list[Diagnostic]:
     return checks
 
 
-def run_doctor(stream=None) -> int:
-    """Print a readable diagnostic report and return nonzero for required failures."""
-    output = stream or sys.stdout
+def run_doctor(stream=None, *, json_output: bool = False) -> int:
+    """Print a human-readable or machine-readable report and return its exit code."""
+    output = stream if stream is not None else sys.stdout
     checks = collect_diagnostics()
-    for check in checks:
-        print(f"[{check.status}] {check.name}: {check.detail}", file=output)
-
-    counts = {
-        status: sum(check.status == status for check in checks)
+    summary = {
+        status.lower(): sum(check.status == status for check in checks)
         for status in ("OK", "WARN", "INFO", "FAIL")
     }
-    print(
-        "\nSummary: "
-        f"{counts['OK']} OK, {counts['WARN']} warning(s), "
-        f"{counts['INFO']} optional, {counts['FAIL']} failure(s).",
-        file=output,
-    )
-    return 1 if counts["FAIL"] else 0
+    exit_code = 1 if summary["fail"] else 0
+
+    if json_output:
+        report = {
+            "schema_version": 1,
+            "checks": [
+                {"status": check.status, "name": check.name, "detail": check.detail}
+                for check in checks
+            ],
+            "summary": summary,
+            "exit_code": exit_code,
+        }
+        print(json.dumps(report, indent=2), file=output)
+    else:
+        for check in checks:
+            print(f"[{check.status}] {check.name}: {check.detail}", file=output)
+        print(
+            "\nSummary: "
+            f"{summary['ok']} OK, {summary['warn']} warning(s), "
+            f"{summary['info']} optional, {summary['fail']} failure(s).",
+            file=output,
+        )
+    return exit_code
