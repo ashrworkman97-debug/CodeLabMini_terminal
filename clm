@@ -473,6 +473,7 @@ def local_command(cmd: str, args: list[str], started_at: float) -> bool:
 
 
 def shell(initial_port: Optional[str] = None) -> int:
+    """Run the interactive CLM-1 console and manage its serial connection."""
     print(f"CLM-1 Command Line Manager v{APP_VERSION}")
     print("Type `help` for commands. Type `quit` to exit.\n")
     started_at = time.monotonic()
@@ -776,6 +777,7 @@ def shell(initial_port: Optional[str] = None) -> int:
 
 
 def main(argv=None) -> int:
+    """Dispatch a top-level CLM-1 command and return its process exit code."""
     args = list(sys.argv[1:] if argv is None else argv)
     if not args:
         return shell()
