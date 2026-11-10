@@ -18,7 +18,7 @@ DEVICE AND CONNECTION COMMANDS
   version                     Show host and firmware protocol versions
   update                      Download and install the latest CLM-1 host update
   update check                Check GitHub for a newer host version
-  doctor [--json]             Diagnose Python, USB visibility, and flash prerequisites (read-only)
+  doctor [--json]             Diagnose setup, USB visibility, and Unix USB access (read-only)
   device                      Show the active serial device
   scan                        Scan serial devices
   ping                        Check device communication
