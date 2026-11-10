@@ -36,7 +36,7 @@ def run_doctor(json_output: bool = False) -> int:
             raise
         message = (
             "The diagnostics module is missing from this installation. "
-            "Run `clm update` once more to finish the 1.7.0 upgrade, then retry."
+            "Run `clm update` once more to finish the CLM-1 upgrade, then retry."
         )
         if json_output:
             print(json.dumps({
@@ -85,6 +85,7 @@ MAGIC_ANSWERS = [
 
 
 def load_serial_modules():
+    """Import pySerial and show installation guidance when it is unavailable."""
     try:
         import serial
         from serial.tools import list_ports
@@ -96,11 +97,13 @@ def load_serial_modules():
 
 
 def get_ports():
+    """Return the serial ports currently visible to pySerial."""
     _, list_ports = load_serial_modules()
     return list(list_ports.comports())
 
 
 def show_devices() -> int:
+    """List visible serial devices and report whether a Code Lab Mini was found."""
     ports = get_ports()
     print("CLM-1 device scan")
     print("-----------------")
@@ -123,6 +126,7 @@ def show_devices() -> int:
 
 class SerialLink:
     def __init__(self, port: str, baud: int = DEFAULT_BAUD):
+        """Open the selected serial port and start its background reader."""
         serial, _ = load_serial_modules()
         self.serial_module = serial
         self.port = port
@@ -145,6 +149,7 @@ class SerialLink:
         self.open()
 
     def explain_serial_error(self, exc: Exception) -> str:
+        """Turn a serial exception into actionable platform-specific guidance."""
         message = str(exc)
         lower = message.lower()
         if "input/output error" in lower or "errno 5" in lower:
@@ -162,6 +167,7 @@ class SerialLink:
         return f"Serial error on {self.port}: {message}"
 
     def open(self):
+        """Open the configured serial port and start the reader thread."""
         try:
             self.ser.open()
         except (OSError, self.serial_module.SerialException) as exc:
@@ -170,6 +176,7 @@ class SerialLink:
         self.reader.start()
 
     def send(self, command: str) -> bool:
+        """Write one newline-terminated ASCII command to the Mini."""
         try:
             payload = (command.strip() + "\n").encode("ascii", errors="strict")
         except UnicodeEncodeError:
@@ -188,6 +195,7 @@ class SerialLink:
             return False
 
     def read_loop(self):
+        """Read device messages and report state changes until stopped or disconnected."""
         while not self.reader_stop.is_set():
             try:
                 raw = self.ser.readline()
@@ -216,6 +224,7 @@ class SerialLink:
             print(f"\n[device] {line}")
 
     def check_reader(self):
+        """Display any serial-reader error deferred by the background thread."""
         try:
             message = self.reader_error.get_nowait()
         except queue.Empty:
@@ -223,6 +232,7 @@ class SerialLink:
         print("\n[USB ERROR] " + message)
 
     def close(self):
+        """Stop the reader thread and close the serial port when it is open."""
         self.reader_stop.set()
         if self.reader and self.reader.is_alive():
             self.reader.join(timeout=0.8)
@@ -233,6 +243,7 @@ class SerialLink:
             pass
 
     def send_morse(self, message: str, unit_ms: int = 120, frequency: int = 700):
+        """Transmit a message as Morse code through the Mini's speaker."""
         text = message.upper()
         unsupported = sorted(set(ch for ch in text if ch != " " and ch not in MORSE))
         if unsupported:
@@ -260,6 +271,7 @@ class SerialLink:
 
 
 def print_help():
+    """Print the interactive CLM-1 command reference."""
     print(f"""CLM-1 Command Line Manager v{APP_VERSION}
 
 DEVICE / CONNECTION
@@ -360,6 +372,7 @@ Examples:
 
 
 def resolve_port(explicit: Optional[str] = None) -> str:
+    """Select an explicit port or identify the connected Mini automatically."""
     ports = get_ports()
     if explicit:
         return explicit
@@ -380,6 +393,7 @@ def resolve_port(explicit: Optional[str] = None) -> str:
 
 
 def need_link(link: Optional[SerialLink]) -> bool:
+    """Return whether a serial link is available, reporting when it is not."""
     if link is None:
         print("Not connected. Use `reconnect` or `scan`.")
         return False
@@ -387,11 +401,13 @@ def need_link(link: Optional[SerialLink]) -> bool:
 
 
 def send(link: Optional[SerialLink], command: str):
+    """Send a command only when the interactive session has an active link."""
     if need_link(link):
         link.send(command)
 
 
 def parse_int(value: str, low: int, high: int) -> int:
+    """Parse an integer and require it to fall within the inclusive bounds."""
     number = int(value)
     if number < low or number > high:
         raise ValueError
@@ -399,6 +415,7 @@ def parse_int(value: str, low: int, high: int) -> int:
 
 
 def terminal_logo():
+    """Print the CLM-1 terminal logo."""
     print(r"""
    _____ _     __  __       _
   / ____| |   |  \/  |     | |

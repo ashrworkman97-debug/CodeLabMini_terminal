@@ -38,6 +38,31 @@ class DoctorTests(unittest.TestCase):
                 self.assertEqual(namespace["run_doctor"](), 1)
 
         self.assertIn("Run `clm update` once more", output.getvalue())
+        self.assertIn("finish the CLM-1 upgrade", output.getvalue())
+
+    def test_cli_import_and_update_path_json_survive_missing_doctor_module(self):
+        """Return a structured failure when a legacy upgrade lacks clm_doctor.py."""
+        cli_path = Path(__file__).resolve().parents[1] / "clm"
+        real_import = builtins.__import__
+
+        def import_without_doctor(name, *args, **kwargs):
+            """Simulate the first update pass before the new module is copied."""
+            if name == "clm_doctor":
+                raise ModuleNotFoundError("missing during legacy upgrade", name="clm_doctor")
+            return real_import(name, *args, **kwargs)
+
+        output = io.StringIO()
+        with patch("builtins.__import__", side_effect=import_without_doctor):
+            namespace = runpy.run_path(str(cli_path))
+            with contextlib.redirect_stdout(output):
+                result = namespace["run_doctor"](json_output=True)
+
+        report = json.loads(output.getvalue())
+        self.assertEqual(result, 1)
+        self.assertEqual(report["schema_version"], 1)
+        self.assertEqual(report["summary"]["fail"], 1)
+        self.assertEqual(report["exit_code"], 1)
+        self.assertIn("finish the CLM-1 upgrade", report["checks"][0]["detail"])
 
     def setUp(self):
         """Prepare a fake pySerial package for each test."""

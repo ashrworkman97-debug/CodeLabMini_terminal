@@ -23,6 +23,7 @@ DATA_FILES = ("clm_firmware.ino", "README.md", "COMMANDS.txt", "CHANGELOG.md",
 
 
 def _latest_version(timeout: float = 2.0) -> str | None:
+    """Fetch the current CLI source and extract its declared application version."""
     request = urllib.request.Request(RAW_CLI, headers={"User-Agent": "CLM-1 updater"})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         source = response.read(2_000_000).decode("utf-8")
@@ -31,6 +32,7 @@ def _latest_version(timeout: float = 2.0) -> str | None:
 
 
 def _version_tuple(value: str) -> tuple[int, ...]:
+    """Convert a dotted numeric version into a tuple suitable for comparison."""
     try:
         return tuple(int(part) for part in value.split("."))
     except ValueError:
