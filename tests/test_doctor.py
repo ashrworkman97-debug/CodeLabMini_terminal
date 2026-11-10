@@ -44,7 +44,7 @@ class DoctorTests(unittest.TestCase):
         self.serial = SimpleNamespace(__version__="3.5.0")
 
     def collect(self, ports=None, cli="/usr/bin/arduino-cli", firmware=True,
-                python_version=(3, 12, 1)):
+                python_version=(3, 12, 1), port_access=True):
         """Collect checks with controlled Python, USB, Arduino CLI, and firmware state."""
         list_ports = SimpleNamespace(comports=lambda: list(ports or []))
         firmware_path = Path("/tmp/clm_firmware.ino")
@@ -52,6 +52,7 @@ class DoctorTests(unittest.TestCase):
             patch.object(clm_doctor.sys, "version_info", python_version),
             patch.object(clm_doctor, "_load_serial", return_value=(self.serial, list_ports)),
             patch.object(clm_doctor.shutil, "which", return_value=cli),
+            patch.object(clm_doctor.os, "access", return_value=port_access),
             patch.object(
                 clm_doctor, "_find_firmware",
                 return_value=firmware_path if firmware else None,
@@ -83,6 +84,31 @@ class DoctorTests(unittest.TestCase):
         device_check = next(check for check in checks if check.name == "Code Lab Mini")
         self.assertEqual(device_check.status, "WARN")
         self.assertIn("/dev/ttyACM0", device_check.detail)
+
+    def test_usb_permissions_are_reported_when_accessible(self):
+        """Report successful read/write access without opening the serial port."""
+        with patch.object(clm_doctor.sys, "platform", "linux"):
+            checks = self.collect(ports=[fake_port()], port_access=True)
+        permission_check = next(check for check in checks if check.name == "USB permissions")
+        self.assertEqual(permission_check.status, "OK")
+        self.assertIn("Read/write access", permission_check.detail)
+
+    def test_usb_permission_warning_includes_linux_group_guidance(self):
+        """Explain a common Linux serial-device permission fix."""
+        with patch.object(clm_doctor.sys, "platform", "linux"):
+            checks = self.collect(ports=[fake_port()], port_access=False)
+        permission_check = next(check for check in checks if check.name == "USB permissions")
+        self.assertEqual(permission_check.status, "WARN")
+        self.assertIn("dialout", permission_check.detail)
+        self.assertIn("usermod -aG", permission_check.detail)
+
+    def test_windows_skips_unix_device_node_permission_check(self):
+        """Avoid treating Windows COM ports as Unix filesystem paths."""
+        with patch.object(clm_doctor.sys, "platform", "win32"):
+            with patch.object(clm_doctor.os, "access") as access:
+                check = clm_doctor._check_usb_permissions([fake_port("COM3")])
+        access.assert_not_called()
+        self.assertEqual(check.status, "INFO")
 
     def test_missing_pyserial_is_a_required_failure(self):
         """Mark the missing required pySerial dependency as a failure."""
