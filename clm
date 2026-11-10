@@ -19,7 +19,7 @@ from clm_ai import (
 from clm_flash import handle_flash_command
 from clm_update import check_for_update, install_update
 
-APP_VERSION = "1.7.0"
+APP_VERSION = "1.8.0"
 DEVICE_NAME = "Code Lab Mini"
 USB_VID = 0x0403
 USB_PID = 0x6015
@@ -267,7 +267,7 @@ DEVICE / CONNECTION
   version                 Show CLM-1 version
   update                  Download and install the latest CLM-1 update
   update check            Check GitHub for a newer version
-  doctor [--json]         Diagnose the local CLM-1 setup (read-only)
+  doctor [--json]         Diagnose local setup and USB access (read-only)
   device                  Show active USB serial device
   scan                    Scan serial ports
   ping                    Check whether firmware responds
@@ -783,7 +783,7 @@ def main(argv=None) -> int:
         return shell()
     first = args[0].lower()
     if first in ("-h", "--help", "help"):
-        print("Usage: clm [command]\n\n  clm                  Start interactive CLM-1 console\n  clm device clm       Connect to the Code Lab Mini and start console\n  clm device           List/identify devices\n  clm scan             Scan serial ports\n  clm connect [PORT]   Connect using a specified serial port\n  clm_h@cker_init     Compile and flash bundled firmware\n  clm_h@cker_init --compile-only  Compile without uploading\n  clm --version        Show version\n  clm update           Download and install the latest host update\n  clm update check     Check GitHub for a newer version\n  clm doctor [--json]  Diagnose the local setup (read-only)\n  clm ai setup         Configure an OpenAI API key\n  clm ai create IDEA   Generate and save a custom command\n  clm custom list      List saved custom commands\n")
+        print("Usage: clm [command]\n\n  clm                  Start interactive CLM-1 console\n  clm device clm       Connect to the Code Lab Mini and start console\n  clm device           List/identify devices\n  clm scan             Scan serial ports\n  clm connect [PORT]   Connect using a specified serial port\n  clm_h@cker_init     Compile and flash bundled firmware\n  clm_h@cker_init --compile-only  Compile without uploading\n  clm --version        Show version\n  clm update           Download and install the latest host update\n  clm update check     Check GitHub for a newer version\n  clm doctor [--json]  Diagnose local setup and USB access (read-only)\n  clm ai setup         Configure an OpenAI API key\n  clm ai create IDEA   Generate and save a custom command\n  clm custom list      List saved custom commands\n")
         return 0
     if first == "doctor":
         if len(args) > 2 or (len(args) == 2 and args[1].lower() != "--json"):
