@@ -4,7 +4,7 @@ set -euo pipefail
 SOURCE_DIR="$(cd "$(dirname "$0")" && pwd)"
 BIN_DIR="$HOME/.local/bin"
 DATA_DIR="$HOME/.local/share/clm-1"
-VERSION="1.7.0"
+VERSION="1.8.0"
 
 for required_file in clm clm_ai.py clm_flash.py clm_paths.py clm_doctor.py clm_update.py clm_firmware.ino TERMS_OF_USE.md; do
   if [[ ! -f "$SOURCE_DIR/$required_file" ]]; then
