@@ -31,6 +31,13 @@ Notable changes to CLM-1 are documented here.
 - Added offline tests for connected, disconnected, and incomplete local setups.
 - Added the diagnostic module to Linux, Windows, macOS, and self-updater installs.
 
+## 1.8.0 — USB Access Diagnostics
+
+- Extended `clm doctor` to check read/write permissions for detected Unix serial devices without opening the port.
+- Added Linux dialout-group guidance when a detected device is not accessible.
+- Marked the filesystem permission check as not applicable on Windows COM ports.
+- Added offline tests for accessible, inaccessible, and Windows serial-device behavior.
+
 ## Unreleased
 
 - Added offline unit tests for the AI macro validator.
