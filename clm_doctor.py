@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import os
 import shutil
 import sys
 
@@ -31,6 +32,40 @@ def _find_firmware():
     """Locate the bundled firmware sketch using the installer's shared logic."""
     from clm_flash import find_firmware
     return find_firmware()
+
+
+def _check_usb_permissions(ports: list[object]) -> Diagnostic:
+    """Check read/write access to detected Unix serial-device nodes without opening them."""
+    if sys.platform.startswith("win"):
+        return Diagnostic(
+            "INFO", "USB permissions",
+            "Windows manages COM-port access through its device handles; this check is not applicable.",
+        )
+
+    inaccessible = [
+        str(getattr(port, "device", "unknown"))
+        for port in ports
+        if not os.access(str(getattr(port, "device", "")), os.R_OK | os.W_OK)
+    ]
+    if inaccessible:
+        devices = ", ".join(inaccessible)
+        if sys.platform.startswith("linux"):
+            detail = (
+                f"No read/write access to {devices}. On many Debian-based systems, "
+                "add your account to the dialout group with "
+                'sudo usermod -aG dialout "$USER", then sign out and back in.'
+            )
+        else:
+            detail = (
+                f"No read/write access to {devices}. Check the device-node permissions "
+                "and close other serial-monitor applications."
+            )
+        return Diagnostic("WARN", "USB permissions", detail)
+
+    return Diagnostic(
+        "OK", "USB permissions",
+        "Read/write access is available for the detected Code Lab Mini serial device(s).",
+    )
 
 
 def collect_diagnostics() -> list[Diagnostic]:
@@ -72,6 +107,7 @@ def collect_diagnostics() -> list[Diagnostic]:
                     "OK", "Code Lab Mini",
                     f"Found {len(minis)} FTDI 0403:6015 device(s): {names}.",
                 ))
+                checks.append(_check_usb_permissions(minis))
             elif ports:
                 visible = ", ".join(str(getattr(port, "device", "unknown")) for port in ports)
                 checks.append(Diagnostic(
