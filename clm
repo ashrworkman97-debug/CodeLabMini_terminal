@@ -19,7 +19,7 @@ from clm_ai import (
 from clm_flash import handle_flash_command
 from clm_update import check_for_update, install_update
 
-APP_VERSION = "1.8.0"
+APP_VERSION = "1.9.0"
 DEVICE_NAME = "Code Lab Mini"
 USB_VID = 0x0403
 USB_PID = 0x6015
@@ -27,7 +27,7 @@ DEFAULT_BAUD = 9600
 FIRMWARE_VERSION = "1.3.0"
 
 
-def run_doctor(json_output: bool = False) -> int:
+def run_doctor(json_output: bool = False, strict: bool = False) -> int:
     """Run setup diagnostics while remaining compatible with 1.6.0 self-updates."""
     try:
         from clm_doctor import run_doctor as doctor
@@ -43,12 +43,13 @@ def run_doctor(json_output: bool = False) -> int:
                 "schema_version": 1,
                 "checks": [{"status": "FAIL", "name": "Diagnostics module", "detail": message}],
                 "summary": {"ok": 0, "warn": 0, "info": 0, "fail": 1},
+                "strict": strict,
                 "exit_code": 1,
             }, indent=2))
         else:
             print(f"[doctor] {message}")
         return 1
-    return doctor(json_output=json_output)
+    return doctor(json_output=json_output, strict=strict)
 
 MORSE = {
     "A": ".-", "B": "-...", "C": "-.-.", "D": "-..", "E": ".",
@@ -279,7 +280,7 @@ DEVICE / CONNECTION
   version                 Show CLM-1 version
   update                  Download and install the latest CLM-1 update
   update check            Check GitHub for a newer version
-  doctor [--json]         Diagnose local setup and USB access (read-only)
+  doctor [--json] [--strict]  Diagnose setup; strict mode fails on warnings
   device                  Show active USB serial device
   scan                    Scan serial ports
   ping                    Check whether firmware responds
@@ -537,12 +538,14 @@ def shell(initial_port: Optional[str] = None) -> int:
                 print("Usage: update [check]")
             continue
         if cmd == "doctor":
-            if not args:
-                run_doctor()
-            elif len(args) == 1 and args[0].lower() == "--json":
-                run_doctor(json_output=True)
+            options = {arg.lower() for arg in args}
+            if len(options) != len(args) or not options.issubset({"--json", "--strict"}):
+                print("Usage: doctor [--json] [--strict]")
             else:
-                print("Usage: doctor [--json]")
+                run_doctor(
+                    json_output="--json" in options,
+                    strict="--strict" in options,
+                )
             continue
         if cmd == "ai":
             handle_ai_command(args)
@@ -800,13 +803,17 @@ def main(argv=None) -> int:
         return shell()
     first = args[0].lower()
     if first in ("-h", "--help", "help"):
-        print("Usage: clm [command]\n\n  clm                  Start interactive CLM-1 console\n  clm device clm       Connect to the Code Lab Mini and start console\n  clm device           List/identify devices\n  clm scan             Scan serial ports\n  clm connect [PORT]   Connect using a specified serial port\n  clm_h@cker_init     Compile and flash bundled firmware\n  clm_h@cker_init --compile-only  Compile without uploading\n  clm --version        Show version\n  clm update           Download and install the latest host update\n  clm update check     Check GitHub for a newer version\n  clm doctor [--json]  Diagnose local setup and USB access (read-only)\n  clm ai setup         Configure an OpenAI API key\n  clm ai create IDEA   Generate and save a custom command\n  clm custom list      List saved custom commands\n")
+        print("Usage: clm [command]\n\n  clm                  Start interactive CLM-1 console\n  clm device clm       Connect to the Code Lab Mini and start console\n  clm device           List/identify devices\n  clm scan             Scan serial ports\n  clm connect [PORT]   Connect using a specified serial port\n  clm_h@cker_init     Compile and flash bundled firmware\n  clm_h@cker_init --compile-only  Compile without uploading\n  clm --version        Show version\n  clm update           Download and install the latest host update\n  clm update check     Check GitHub for a newer version\n  clm doctor [--json] [--strict]  Diagnose setup; strict mode fails on warnings\n  clm ai setup         Configure an OpenAI API key\n  clm ai create IDEA   Generate and save a custom command\n  clm custom list      List saved custom commands\n")
         return 0
     if first == "doctor":
-        if len(args) > 2 or (len(args) == 2 and args[1].lower() != "--json"):
-            print("Usage: clm doctor [--json]")
+        options = {arg.lower() for arg in args[1:]}
+        if len(options) != len(args) - 1 or not options.issubset({"--json", "--strict"}):
+            print("Usage: clm doctor [--json] [--strict]")
             return 2
-        return run_doctor(json_output=len(args) == 2)
+        return run_doctor(
+            json_output="--json" in options,
+            strict="--strict" in options,
+        )
     if first == "update":
         if len(args) == 2 and args[1].lower() == "check":
             check_for_update(APP_VERSION, silent=False, force=True)

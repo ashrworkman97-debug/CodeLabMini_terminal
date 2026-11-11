@@ -3,7 +3,7 @@ set -euo pipefail
 SOURCE_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_DIR="$HOME/Library/Application Support/CLM-1"
 BIN_DIR="$HOME/.local/bin"
-VERSION="1.8.0"
+VERSION="1.9.0"
 for required_file in clm clm_ai.py clm_flash.py clm_paths.py clm_doctor.py clm_update.py clm_firmware.ino TERMS_OF_USE.md requirements.txt; do
   if [[ ! -f "$SOURCE_DIR/$required_file" ]]; then
     printf 'Error: required project file is missing: %s\n' "$required_file" >&2

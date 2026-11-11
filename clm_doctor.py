@@ -140,7 +140,7 @@ def collect_diagnostics() -> list[Diagnostic]:
     return checks
 
 
-def run_doctor(stream=None, *, json_output: bool = False) -> int:
+def run_doctor(stream=None, *, json_output: bool = False, strict: bool = False) -> int:
     """Print a human-readable or machine-readable report and return its exit code."""
     output = stream if stream is not None else sys.stdout
     checks = collect_diagnostics()
@@ -148,7 +148,7 @@ def run_doctor(stream=None, *, json_output: bool = False) -> int:
         status.lower(): sum(check.status == status for check in checks)
         for status in ("OK", "WARN", "INFO", "FAIL")
     }
-    exit_code = 1 if summary["fail"] else 0
+    exit_code = 1 if summary["fail"] or (strict and summary["warn"]) else 0
 
     if json_output:
         report = {
@@ -158,6 +158,7 @@ def run_doctor(stream=None, *, json_output: bool = False) -> int:
                 for check in checks
             ],
             "summary": summary,
+            "strict": strict,
             "exit_code": exit_code,
         }
         print(json.dumps(report, indent=2), file=output)
@@ -170,4 +171,6 @@ def run_doctor(stream=None, *, json_output: bool = False) -> int:
             f"{summary['info']} optional, {summary['fail']} failure(s).",
             file=output,
         )
+        if strict:
+            print("Strict mode: warnings cause a non-zero exit code.", file=output)
     return exit_code

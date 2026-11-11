@@ -199,6 +199,40 @@ class DoctorTests(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertIn("1 warning(s)", output.getvalue())
 
+    def test_strict_mode_treats_warnings_as_nonzero(self):
+        """Make warnings fail strict checks without changing their diagnostic severity."""
+        output = io.StringIO()
+        checks = [
+            clm_doctor.Diagnostic("WARN", "Code Lab Mini", "Not connected."),
+            clm_doctor.Diagnostic("INFO", "Arduino CLI", "Optional."),
+        ]
+        with patch.object(clm_doctor, "collect_diagnostics", return_value=checks):
+            result = clm_doctor.run_doctor(output, strict=True)
+        self.assertEqual(result, 1)
+        self.assertIn("[WARN] Code Lab Mini", output.getvalue())
+        self.assertIn("Strict mode: warnings cause a non-zero exit code.", output.getvalue())
+
+    def test_strict_json_report_marks_mode_and_fails_on_warnings(self):
+        """Expose strict mode and its warning-sensitive exit code to scripts."""
+        output = io.StringIO()
+        checks = [clm_doctor.Diagnostic("WARN", "Code Lab Mini", "Not connected.")]
+        with patch.object(clm_doctor, "collect_diagnostics", return_value=checks):
+            result = clm_doctor.run_doctor(output, json_output=True, strict=True)
+        report = json.loads(output.getvalue())
+        self.assertEqual(result, 1)
+        self.assertTrue(report["strict"])
+        self.assertEqual(report["summary"]["warn"], 1)
+        self.assertEqual(report["exit_code"], 1)
+
+    def test_cli_accepts_doctor_options_in_any_order(self):
+        """Allow --json and --strict together in either order."""
+        cli_path = Path(__file__).resolve().parents[1] / "clm"
+        namespace = runpy.run_path(str(cli_path))
+        for options in (["--json", "--strict"], ["--strict", "--json"]):
+            with patch.object(clm_doctor, "run_doctor", return_value=0) as doctor:
+                self.assertEqual(namespace["main"](["doctor", *options]), 0)
+            doctor.assert_called_once_with(json_output=True, strict=True)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,7 +16,7 @@ CLM-1 is an open-source command-line toolkit for the **Let's Start Coding Code L
 - Run built-in light shows, alerts, games, and terminal utilities.
 - Optionally generate reusable hardware macros through the OpenAI API.
 - Check GitHub for CLM-1 updates automatically at startup, with a one-command self-updater.
-- Run `clm doctor` for read-only setup diagnostics, including USB serial visibility and Unix read/write access, or use `clm doctor --json` for scripts.
+- Run `clm doctor` for read-only setup diagnostics, including USB serial visibility and Unix read/write access; use `--json` for scripts or `--strict` to make warnings return a failing exit code.
 - Use the project on Windows 10/11, macOS, Linux, and ChromeOS Linux.
 
 ## Contents
@@ -195,7 +195,7 @@ Before connecting, run the read-only setup check from your terminal:
 clm doctor
 ```
 
-It checks Python, pySerial, visible USB serial ports, read/write access to detected Unix serial devices, the optional Arduino CLI, and the bundled firmware sketch. The permission check does not open the port; on Windows it is marked not applicable. The command does not contact or change the Mini. Add `--json` to print a versioned JSON report with per-check details, summary counts, and an exit code for scripts.
+It checks Python, pySerial, visible USB serial ports, read/write access to detected Unix serial devices, the optional Arduino CLI, and the bundled firmware sketch. The permission check does not open the port; on Windows it is marked not applicable. The command does not contact or change the Mini. Add `--json` to print a versioned JSON report with per-check details, summary counts, and an exit code for scripts. Add `--strict` to return exit code 1 when any warning is present as well as when a required check fails; this is useful in scripts that require the Mini to be connected and accessible. The options can be combined in either order.
 
 Once connected, try these commands inside the CLM-1 prompt:
 

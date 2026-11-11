@@ -38,6 +38,12 @@ Notable changes to CLM-1 are documented here.
 - Marked the filesystem permission check as not applicable on Windows COM ports.
 - Added offline tests for accessible, inaccessible, and Windows serial-device behavior.
 
+## 1.9.0 — Strict Diagnostic Mode
+
+- Added `clm doctor --strict` (also available inside the interactive console) to return a non-zero exit code when warnings or required failures are reported.
+- Added a `strict` field to JSON diagnostic reports and offline tests for strict text, JSON, and CLI behavior.
+- Updated Linux, macOS, and Windows installer version labels to 1.9.0.
+
 ## Unreleased
 
 - Added offline unit tests for the AI macro validator.

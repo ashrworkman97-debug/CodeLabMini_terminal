@@ -1,4 +1,4 @@
-CLM-1 v1.8.0 — COMMAND REFERENCE
+CLM-1 v1.9.0 — COMMAND REFERENCE
 =================================
 
 START / CONNECTION
@@ -18,7 +18,7 @@ DEVICE AND CONNECTION COMMANDS
   version                     Show host and firmware protocol versions
   update                      Download and install the latest CLM-1 host update
   update check                Check GitHub for a newer host version
-  doctor [--json]             Diagnose setup, USB visibility, and Unix USB access (read-only)
+  doctor [--json] [--strict]  Diagnose setup; strict mode fails on warnings (read-only)
   device                      Show the active serial device
   scan                        Scan serial devices
   ping                        Check device communication
