@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import clm_doctor
 
@@ -63,6 +63,25 @@ class DoctorTests(unittest.TestCase):
         self.assertEqual(report["summary"]["fail"], 1)
         self.assertEqual(report["exit_code"], 1)
         self.assertIn("finish the CLM-1 upgrade", report["checks"][0]["detail"])
+
+    def test_update_command_remains_available_when_doctor_module_is_missing(self):
+        """Keep the legacy 1.6.0 self-updater callable during the first upgrade pass."""
+        cli_path = Path(__file__).resolve().parents[1] / "clm"
+        real_import = builtins.__import__
+
+        def import_without_doctor(name, *args, **kwargs):
+            """Simulate the module layout left by the original 1.6.0 updater."""
+            if name == "clm_doctor":
+                raise ModuleNotFoundError("missing during legacy upgrade", name="clm_doctor")
+            return real_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=import_without_doctor):
+            namespace = runpy.run_path(str(cli_path))
+            update = Mock(return_value=0)
+            namespace["install_update"] = update
+            self.assertEqual(namespace["main"](["update"]), 0)
+
+        update.assert_called_once_with()
 
     def setUp(self):
         """Prepare a fake pySerial package for each test."""
