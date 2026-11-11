@@ -186,7 +186,7 @@ class DoctorTests(unittest.TestCase):
         namespace = runpy.run_path(str(cli_path))
         with patch.object(clm_doctor, "run_doctor", return_value=0) as doctor:
             self.assertEqual(namespace["main"](["doctor", "--json"]), 0)
-        doctor.assert_called_once_with(json_output=True)
+        doctor.assert_called_once_with(json_output=True, strict=False)
 
     def test_doctor_prints_a_summary_and_returns_success_with_only_warnings(self):
         """Return success when diagnostics contain warnings but no failures."""
