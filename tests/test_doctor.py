@@ -78,8 +78,8 @@ class DoctorTests(unittest.TestCase):
         with patch("builtins.__import__", side_effect=import_without_doctor):
             namespace = runpy.run_path(str(cli_path))
             update = Mock(return_value=0)
-            namespace["install_update"] = update
-            self.assertEqual(namespace["main"](["update"]), 0)
+            with patch.dict(namespace["main"].__globals__, {"install_update": update}):
+                self.assertEqual(namespace["main"](["update"]), 0)
 
         update.assert_called_once_with()
 
@@ -91,7 +91,7 @@ class DoctorTests(unittest.TestCase):
         doctor = Mock(return_value=1)
         with (
             patch("builtins.input", side_effect=["doctor --strict", "quit"]),
-            patch.dict(namespace, {
+            patch.dict(namespace["shell"].__globals__, {
                 "check_for_update": Mock(),
                 "resolve_port": Mock(side_effect=RuntimeError("offline")),
                 "run_doctor": doctor,
