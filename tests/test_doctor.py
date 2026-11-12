@@ -83,6 +83,30 @@ class DoctorTests(unittest.TestCase):
 
         update.assert_called_once_with()
 
+    def test_interactive_doctor_propagates_strict_failure_on_exit(self):
+        """Return the last doctor result when the interactive console exits."""
+        cli_path = Path(__file__).resolve().parents[1] / "clm"
+        namespace = runpy.run_path(str(cli_path))
+        output = io.StringIO()
+        doctor = Mock(return_value=1)
+        with (
+            patch("builtins.input", side_effect=["doctor --strict", "quit"]),
+            patch.dict(namespace, {
+                "check_for_update": Mock(),
+                "resolve_port": Mock(side_effect=RuntimeError("offline")),
+                "run_doctor": doctor,
+            }),
+            contextlib.redirect_stdout(output),
+        ):
+            result = namespace["shell"]()
+
+        self.assertEqual(result, 1)
+        doctor.assert_called_once_with(json_output=False, strict=True)
+        self.assertIn(
+            "[doctor] Diagnostic check failed (exit code 1).",
+            output.getvalue(),
+        )
+
     def setUp(self):
         """Prepare a fake pySerial package for each test."""
         self.serial = SimpleNamespace(__version__="3.5.0")

@@ -508,6 +508,7 @@ def shell(initial_port: Optional[str] = None) -> int:
         print(f"[connection] {exc}")
         print("CLM-1 will start offline. Use `scan` and `reconnect` after fixing USB access.")
 
+    doctor_exit_code = 0
     led_state = False
     while True:
         if link:
@@ -542,10 +543,12 @@ def shell(initial_port: Optional[str] = None) -> int:
             if len(options) != len(args) or not options.issubset({"--json", "--strict"}):
                 print("Usage: doctor [--json] [--strict]")
             else:
-                run_doctor(
+                doctor_exit_code = run_doctor(
                     json_output="--json" in options,
                     strict="--strict" in options,
                 )
+                if doctor_exit_code:
+                    print(f"[doctor] Diagnostic check failed (exit code {doctor_exit_code}).")
             continue
         if cmd == "ai":
             handle_ai_command(args)
@@ -793,7 +796,7 @@ def shell(initial_port: Optional[str] = None) -> int:
         link.send("RESET")
         link.close()
     print("CLM-1 closed.")
-    return 0
+    return doctor_exit_code
 
 
 def main(argv=None) -> int:
