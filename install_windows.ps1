@@ -10,7 +10,7 @@ foreach ($File in $Required) {
 $PythonLauncher = Get-Command py -ErrorAction SilentlyContinue
 $PythonCommand = Get-Command python -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $AppDir | Out-Null
-$VenvPython = Join-Path $AppDir ".venv\\Scripts\\python.exe"
+$VenvPython = Join-Path $AppDir ".venv\Scripts\python.exe"
 if (-not (Test-Path $VenvPython)) {
     if ($PythonLauncher) {
         & py -3 -m venv (Join-Path $AppDir ".venv")
@@ -33,8 +33,8 @@ if ($LASTEXITCODE -ne 0) { throw "Could not update pip in the CLM-1 environment.
 & $VenvPython -m pip install -r (Join-Path $AppDir "requirements.txt")
 if ($LASTEXITCODE -ne 0) { throw "Could not install CLM-1 dependencies." }
 $CrLf = [char]13 + [char]10
-$ClmShim = '@echo off' + $CrLf + '"%~dp0.venv\\Scripts\\python.exe" "%~dp0clm" %*' + $CrLf
-$FlashShim = '@echo off' + $CrLf + '"%~dp0.venv\\Scripts\\python.exe" "%~dp0clm" clm_h@cker_init %*' + $CrLf
+$ClmShim = '@echo off' + $CrLf + '"%~dp0.venv\Scripts\python.exe" "%~dp0clm" %*' + $CrLf
+$FlashShim = '@echo off' + $CrLf + '"%~dp0.venv\Scripts\python.exe" "%~dp0clm" clm_h@cker_init %*' + $CrLf
 Set-Content -Encoding ASCII -Path (Join-Path $AppDir "clm.cmd") -Value $ClmShim
 Set-Content -Encoding ASCII -Path (Join-Path $AppDir "clm_h@cker_init.cmd") -Value $FlashShim
 $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
