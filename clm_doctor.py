@@ -103,10 +103,18 @@ def collect_diagnostics() -> list[Diagnostic]:
             ]
             if minis:
                 names = ", ".join(str(getattr(port, "device", "unknown")) for port in minis)
-                checks.append(Diagnostic(
-                    "OK", "Code Lab Mini",
-                    f"Found {len(minis)} FTDI 0403:6015 device(s): {names}.",
-                ))
+                if len(minis) > 1:
+                    checks.append(Diagnostic(
+                        "WARN", "Code Lab Mini",
+                        f"Found {len(minis)} FTDI 0403:6015 devices: {names}. "
+                        "Firmware flashing needs an explicit target; use "
+                        "`clm_h@cker_init --port PORT`.",
+                    ))
+                else:
+                    checks.append(Diagnostic(
+                        "OK", "Code Lab Mini",
+                        f"Found one FTDI 0403:6015 device: {names}.",
+                    ))
                 checks.append(_check_usb_permissions(minis))
             elif ports:
                 visible = ", ".join(str(getattr(port, "device", "unknown")) for port in ports)
