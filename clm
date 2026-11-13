@@ -19,7 +19,7 @@ from clm_ai import (
 from clm_flash import handle_flash_command
 from clm_update import check_for_update, install_update
 
-APP_VERSION = "1.9.0"
+APP_VERSION = "1.10.0"
 DEVICE_NAME = "Code Lab Mini"
 USB_VID = 0x0403
 USB_PID = 0x6015
