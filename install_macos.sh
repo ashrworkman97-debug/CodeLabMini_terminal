@@ -6,7 +6,7 @@ BIN_DIR="$HOME/.local/bin"
 VERSION="1.10.0"
 for required_file in clm clm_ai.py clm_flash.py clm_paths.py clm_doctor.py clm_update.py clm_firmware.ino TERMS_OF_USE.md requirements.txt; do
   if [[ ! -f "$SOURCE_DIR/$required_file" ]]; then
-    printf 'Error: required project file is missing: %s\\n' "$SOURCE_DIR/$required_file" >&2
+    printf 'Error: required project file is missing: %s\n' "$SOURCE_DIR/$required_file" >&2
     exit 1
   fi
 done
@@ -36,10 +36,10 @@ chmod 0755 "$BIN_DIR/clm" "$BIN_DIR/clm_h@cker_init"
 for rc in "$HOME/.zprofile" "$HOME/.bash_profile"; do
   touch "$rc"
   if ! grep -Fq 'export PATH="$HOME/.local/bin:$PATH"' "$rc"; then
-    printf '\\n# CLM-1 command-line tools\\nexport PATH="$HOME/.local/bin:$PATH"\\n' >> "$rc"
+    printf '\n# CLM-1 command-line tools\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$rc"
   fi
 done
-printf '\\nCLM-1 v%s installed for macOS.\\n' "$VERSION"
-printf 'Open a new Terminal window, or run: export PATH="$HOME/.local/bin:$PATH"\\n'
-printf 'Then launch: clm\\nDirect firmware flasher: clm_h@cker_init\\n'
-printf 'Firmware and terms: %s\\n' "$APP_DIR"
+printf '\nCLM-1 v%s installed for macOS.\n' "$VERSION"
+printf 'Open a new Terminal window, or run: export PATH="$HOME/.local/bin:$PATH"\n'
+printf 'Then launch: clm\nDirect firmware flasher: clm_h@cker_init\n'
+printf 'Firmware and terms: %s\n' "$APP_DIR"
