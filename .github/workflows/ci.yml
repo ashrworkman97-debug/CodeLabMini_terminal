@@ -57,7 +57,7 @@ jobs:
           python -m pip install -r requirements.txt
 
       - name: Compile Python files
-        run: python -m py_compile clm clm_ai.py clm_flash.py clm_paths.py
+        run: python -m py_compile clm clm_ai.py clm_flash.py clm_paths.py clm_doctor.py
 
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
@@ -78,3 +78,5 @@ jobs:
         run: |
           python clm --version
           python clm --help
+          python clm doctor
+          python clm doctor --json

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import datetime as _datetime
 import queue
 import random
@@ -18,12 +19,37 @@ from clm_ai import (
 from clm_flash import handle_flash_command
 from clm_update import check_for_update, install_update
 
-APP_VERSION = "1.6.0"
+APP_VERSION = "1.10.0"
 DEVICE_NAME = "Code Lab Mini"
 USB_VID = 0x0403
 USB_PID = 0x6015
 DEFAULT_BAUD = 9600
 FIRMWARE_VERSION = "1.3.0"
+
+
+def run_doctor(json_output: bool = False, strict: bool = False) -> int:
+    """Run setup diagnostics while remaining compatible with 1.6.0 self-updates."""
+    try:
+        from clm_doctor import run_doctor as doctor
+    except ModuleNotFoundError as exc:
+        if exc.name != "clm_doctor":
+            raise
+        message = (
+            "The diagnostics module is missing from this installation. "
+            "Run `clm update` once more to finish the CLM-1 upgrade, then retry."
+        )
+        if json_output:
+            print(json.dumps({
+                "schema_version": 1,
+                "checks": [{"status": "FAIL", "name": "Diagnostics module", "detail": message}],
+                "summary": {"ok": 0, "warn": 0, "info": 0, "fail": 1},
+                "strict": strict,
+                "exit_code": 1,
+            }, indent=2))
+        else:
+            print(f"[doctor] {message}")
+        return 1
+    return doctor(json_output=json_output, strict=strict)
 
 MORSE = {
     "A": ".-", "B": "-...", "C": "-.-.", "D": "-..", "E": ".",
@@ -60,6 +86,7 @@ MAGIC_ANSWERS = [
 
 
 def load_serial_modules():
+    """Import pySerial and show installation guidance when it is unavailable."""
     try:
         import serial
         from serial.tools import list_ports
@@ -71,11 +98,13 @@ def load_serial_modules():
 
 
 def get_ports():
+    """Return the serial ports currently visible to pySerial."""
     _, list_ports = load_serial_modules()
     return list(list_ports.comports())
 
 
 def show_devices() -> int:
+    """List visible serial devices and report whether a Code Lab Mini was found."""
     ports = get_ports()
     print("CLM-1 device scan")
     print("-----------------")
@@ -98,6 +127,7 @@ def show_devices() -> int:
 
 class SerialLink:
     def __init__(self, port: str, baud: int = DEFAULT_BAUD):
+        """Open the selected serial port and start its background reader."""
         serial, _ = load_serial_modules()
         self.serial_module = serial
         self.port = port
@@ -120,6 +150,7 @@ class SerialLink:
         self.open()
 
     def explain_serial_error(self, exc: Exception) -> str:
+        """Turn a serial exception into actionable platform-specific guidance."""
         message = str(exc)
         lower = message.lower()
         if "input/output error" in lower or "errno 5" in lower:
@@ -137,6 +168,7 @@ class SerialLink:
         return f"Serial error on {self.port}: {message}"
 
     def open(self):
+        """Open the configured serial port and start the reader thread."""
         try:
             self.ser.open()
         except (OSError, self.serial_module.SerialException) as exc:
@@ -145,6 +177,7 @@ class SerialLink:
         self.reader.start()
 
     def send(self, command: str) -> bool:
+        """Write one newline-terminated ASCII command to the Mini."""
         try:
             payload = (command.strip() + "\n").encode("ascii", errors="strict")
         except UnicodeEncodeError:
@@ -163,6 +196,7 @@ class SerialLink:
             return False
 
     def read_loop(self):
+        """Read device messages and report state changes until stopped or disconnected."""
         while not self.reader_stop.is_set():
             try:
                 raw = self.ser.readline()
@@ -191,6 +225,7 @@ class SerialLink:
             print(f"\n[device] {line}")
 
     def check_reader(self):
+        """Display any serial-reader error deferred by the background thread."""
         try:
             message = self.reader_error.get_nowait()
         except queue.Empty:
@@ -198,6 +233,7 @@ class SerialLink:
         print("\n[USB ERROR] " + message)
 
     def close(self):
+        """Stop the reader thread and close the serial port when it is open."""
         self.reader_stop.set()
         if self.reader and self.reader.is_alive():
             self.reader.join(timeout=0.8)
@@ -208,6 +244,7 @@ class SerialLink:
             pass
 
     def send_morse(self, message: str, unit_ms: int = 120, frequency: int = 700):
+        """Transmit a message as Morse code through the Mini's speaker."""
         text = message.upper()
         unsupported = sorted(set(ch for ch in text if ch != " " and ch not in MORSE))
         if unsupported:
@@ -235,6 +272,7 @@ class SerialLink:
 
 
 def print_help():
+    """Print the interactive CLM-1 command reference."""
     print(f"""CLM-1 Command Line Manager v{APP_VERSION}
 
 DEVICE / CONNECTION
@@ -242,6 +280,7 @@ DEVICE / CONNECTION
   version                 Show CLM-1 version
   update                  Download and install the latest CLM-1 update
   update check            Check GitHub for a newer version
+  doctor [--json] [--strict]  Diagnose setup; strict mode fails on warnings
   device                  Show active USB serial device
   scan                    Scan serial ports
   ping                    Check whether firmware responds
@@ -334,6 +373,7 @@ Examples:
 
 
 def resolve_port(explicit: Optional[str] = None) -> str:
+    """Select an explicit port or identify the connected Mini automatically."""
     ports = get_ports()
     if explicit:
         return explicit
@@ -354,6 +394,7 @@ def resolve_port(explicit: Optional[str] = None) -> str:
 
 
 def need_link(link: Optional[SerialLink]) -> bool:
+    """Return whether a serial link is available, reporting when it is not."""
     if link is None:
         print("Not connected. Use `reconnect` or `scan`.")
         return False
@@ -361,11 +402,13 @@ def need_link(link: Optional[SerialLink]) -> bool:
 
 
 def send(link: Optional[SerialLink], command: str):
+    """Send a command only when the interactive session has an active link."""
     if need_link(link):
         link.send(command)
 
 
 def parse_int(value: str, low: int, high: int) -> int:
+    """Parse an integer and require it to fall within the inclusive bounds."""
     number = int(value)
     if number < low or number > high:
         raise ValueError
@@ -373,6 +416,7 @@ def parse_int(value: str, low: int, high: int) -> int:
 
 
 def terminal_logo():
+    """Print the CLM-1 terminal logo."""
     print(r"""
    _____ _     __  __       _
   / ____| |   |  \/  |     | |
@@ -447,6 +491,7 @@ def local_command(cmd: str, args: list[str], started_at: float) -> bool:
 
 
 def shell(initial_port: Optional[str] = None) -> int:
+    """Run the interactive CLM-1 console and manage its serial connection."""
     print(f"CLM-1 Command Line Manager v{APP_VERSION}")
     print("Type `help` for commands. Type `quit` to exit.\n")
     started_at = time.monotonic()
@@ -463,6 +508,7 @@ def shell(initial_port: Optional[str] = None) -> int:
         print(f"[connection] {exc}")
         print("CLM-1 will start offline. Use `scan` and `reconnect` after fixing USB access.")
 
+    doctor_exit_code = 0
     led_state = False
     while True:
         if link:
@@ -491,6 +537,18 @@ def shell(initial_port: Optional[str] = None) -> int:
                 install_update()
             else:
                 print("Usage: update [check]")
+            continue
+        if cmd == "doctor":
+            options = {arg.lower() for arg in args}
+            if len(options) != len(args) or not options.issubset({"--json", "--strict"}):
+                print("Usage: doctor [--json] [--strict]")
+            else:
+                doctor_exit_code = run_doctor(
+                    json_output="--json" in options,
+                    strict="--strict" in options,
+                )
+                if doctor_exit_code:
+                    print(f"[doctor] Diagnostic check failed (exit code {doctor_exit_code}).")
             continue
         if cmd == "ai":
             handle_ai_command(args)
@@ -738,17 +796,27 @@ def shell(initial_port: Optional[str] = None) -> int:
         link.send("RESET")
         link.close()
     print("CLM-1 closed.")
-    return 0
+    return doctor_exit_code
 
 
 def main(argv=None) -> int:
+    """Dispatch a top-level CLM-1 command and return its process exit code."""
     args = list(sys.argv[1:] if argv is None else argv)
     if not args:
         return shell()
     first = args[0].lower()
     if first in ("-h", "--help", "help"):
-        print("Usage: clm [command]\n\n  clm                  Start interactive CLM-1 console\n  clm device clm       Connect to the Code Lab Mini and start console\n  clm device           List/identify devices\n  clm scan             Scan serial ports\n  clm connect [PORT]   Connect using a specified serial port\n  clm_h@cker_init     Compile and flash bundled firmware\n  clm_h@cker_init --compile-only  Compile without uploading\n  clm --version        Show version\n  clm update           Download and install the latest host update\n  clm update check     Check GitHub for a newer version\n  clm ai setup         Configure an OpenAI API key\n  clm ai create IDEA   Generate and save a custom command\n  clm custom list      List saved custom commands\n")
+        print("Usage: clm [command]\n\n  clm                  Start interactive CLM-1 console\n  clm device clm       Connect to the Code Lab Mini and start console\n  clm device           List/identify devices\n  clm scan             Scan serial ports\n  clm connect [PORT]   Connect using a specified serial port\n  clm_h@cker_init     Compile and flash bundled firmware\n  clm_h@cker_init --compile-only  Compile without uploading\n  clm --version        Show version\n  clm update           Download and install the latest host update\n  clm update check     Check GitHub for a newer version\n  clm doctor [--json] [--strict]  Diagnose setup; strict mode fails on warnings\n  clm ai setup         Configure an OpenAI API key\n  clm ai create IDEA   Generate and save a custom command\n  clm custom list      List saved custom commands\n")
         return 0
+    if first == "doctor":
+        options = {arg.lower() for arg in args[1:]}
+        if len(options) != len(args) - 1 or not options.issubset({"--json", "--strict"}):
+            print("Usage: clm doctor [--json] [--strict]")
+            return 2
+        return run_doctor(
+            json_output="--json" in options,
+            strict="--strict" in options,
+        )
     if first == "update":
         if len(args) == 2 and args[1].lower() == "check":
             check_for_update(APP_VERSION, silent=False, force=True)

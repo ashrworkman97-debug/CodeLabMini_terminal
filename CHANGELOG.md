@@ -25,6 +25,32 @@ Notable changes to CLM-1 are documented here.
 - Added a quiet automatic GitHub update check at startup and a `clm update` self-updater.
 - Added `clm update check` for a manual version check.
 
+## 1.7.0 — Setup Diagnostics
+
+- Added `clm doctor`, a read-only diagnostic report for Python, pySerial, USB serial visibility, Arduino CLI, and the bundled firmware sketch; `--json` provides a versioned report for scripts.
+- Added offline tests for connected, disconnected, and incomplete local setups.
+- Added the diagnostic module to Linux, Windows, macOS, and self-updater installs.
+
+## 1.8.0 — USB Access Diagnostics
+
+- Extended `clm doctor` to check read/write permissions for detected Unix serial devices without opening the port.
+- Added Linux dialout-group guidance when a detected device is not accessible.
+- Marked the filesystem permission check as not applicable on Windows COM ports.
+- Added offline tests for accessible, inaccessible, and Windows serial-device behavior.
+
+## 1.9.0 — Strict Diagnostic Mode
+
+- Added `clm doctor --strict` (also available inside the interactive console) to return a non-zero exit code when warnings or required failures are reported.
+- Added a `strict` field to JSON diagnostic reports and offline tests for strict text, JSON, and CLI behavior.
+- Updated Linux, macOS, and Windows installer version labels to 1.9.0.
+
+## 1.10.0 — Multi-device Diagnostics
+
+- Updated `clm doctor` to warn when multiple matching FTDI 0403:6015 devices are visible, since firmware flashing requires an explicit target when more than one Mini is connected.
+- Included the detected port names in the warning and recommended `clm_h@cker_init --port PORT` for explicit selection.
+- Added an offline regression test for multiple matching devices.
+- Updated the CLI, Linux/macOS/Windows installer labels, and command reference to 1.10.0.
+
 ## Unreleased
 
 - Added offline unit tests for the AI macro validator.

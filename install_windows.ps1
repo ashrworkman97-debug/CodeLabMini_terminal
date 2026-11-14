@@ -2,8 +2,8 @@
 $ErrorActionPreference = "Stop"
 $SourceDir = $PSScriptRoot
 $AppDir = Join-Path $env:LOCALAPPDATA "CLM-1"
-$Version = "1.6.0"
-$Required = @("clm", "clm_ai.py", "clm_flash.py", "clm_paths.py", "clm_update.py", "clm_firmware.ino", "TERMS_OF_USE.md", "requirements.txt")
+$Version = "1.10.0"
+$Required = @("clm", "clm_ai.py", "clm_flash.py", "clm_paths.py", "clm_doctor.py", "clm_update.py", "clm_firmware.ino", "TERMS_OF_USE.md", "requirements.txt")
 foreach ($File in $Required) {
     if (-not (Test-Path (Join-Path $SourceDir $File) -PathType Leaf)) { throw "Required project file is missing: $File" }
 }

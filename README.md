@@ -16,6 +16,7 @@ CLM-1 is an open-source command-line toolkit for the **Let's Start Coding Code L
 - Run built-in light shows, alerts, games, and terminal utilities.
 - Optionally generate reusable hardware macros through the OpenAI API.
 - Check GitHub for CLM-1 updates automatically at startup, with a one-command self-updater.
+- Run `clm doctor` for read-only setup diagnostics, including USB serial visibility and Unix read/write access; use `--json` for scripts or `--strict` to make warnings return a failing exit code.
 - Use the project on Windows 10/11, macOS, Linux, and ChromeOS Linux.
 
 ## Contents
@@ -188,6 +189,14 @@ The USB bridge commonly identifies as FTDI **VID:PID 0403:6015**. The Linux devi
 
 ## Quick start
 
+Before connecting, run the read-only setup check from your terminal:
+
+```bash
+clm doctor
+```
+
+It checks Python, pySerial, visible USB serial ports, read/write access to detected Unix serial devices, the optional Arduino CLI, and the bundled firmware sketch. The permission check does not open the port; on Windows it is marked not applicable. The command does not contact or change the Mini. Add `--json` to print a versioned JSON report with per-check details, summary counts, and an exit code for scripts. Add `--strict` to return exit code 1 when any warning is present as well as when a required check fails; this is useful in scripts that require the Mini to be connected and accessible. The options can be combined in either order.
+
 Once connected, try these commands inside the CLM-1 prompt:
 
 ```text
@@ -213,7 +222,7 @@ Leave the console with `quit` or `exit`.
 
 Use `help` inside CLM-1 for the built-in help. The full reference is in [COMMANDS.txt](COMMANDS.txt).
 
-**Connection and device:** `help`, `version`, `update`, `device`, `scan`, `ping`, `info`, `status`, `buttons`, `stream`, `reconnect`, `echo`, `reset`, `panic`, `quit`.
+**Connection and device:** `help`, `version`, `update`, `doctor`, `device`, `scan`, `ping`, `info`, `status`, `buttons`, `stream`, `reconnect`, `echo`, `reset`, `panic`, `quit`.
 
 **LEDs and effects:** `led`, `color`, `rgb`, `blink`, `chase`, `wave`, `rainbow`, `ledtest`.
 
@@ -253,7 +262,9 @@ The offline test suite does not need a connected Mini or an OpenAI API key:
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 -m py_compile clm clm_ai.py clm_flash.py clm_paths.py
+python3 -m py_compile clm clm_ai.py clm_flash.py clm_paths.py clm_doctor.py
+python3 clm doctor
+python3 clm doctor --json
 bash -n install.sh install_macos.sh
 python3 clm --version
 python3 clm --help
