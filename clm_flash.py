@@ -18,6 +18,9 @@ CLI_INSTALL_URL = "https://arduino.github.io/arduino-cli/latest/installation/"
 
 
 def build_parser():
+
+
+    """Build the argument parser for firmware compilation and upload options."""
     parser = argparse.ArgumentParser(
         prog="clm_h@cker_init",
         description="Compile and upload the CLM-1 firmware directly over USB serial.",
@@ -29,6 +32,9 @@ def build_parser():
 
 
 def find_firmware(search_dirs: Optional[Iterable[Path]] = None) -> Path:
+
+
+    """Locate the bundled firmware sketch in the supplied or standard search directories."""
     if search_dirs is None:
         search_dirs = (
             Path(__file__).resolve().parent,
@@ -42,6 +48,9 @@ def find_firmware(search_dirs: Optional[Iterable[Path]] = None) -> Path:
 
 
 def select_port(ports: Iterable[object], requested: Optional[str] = None):
+
+
+    """Resolve the requested serial port or require an unambiguous Mini device."""
     available = list(ports)
     if requested:
         for port in available:
@@ -68,6 +77,9 @@ def select_port(ports: Iterable[object], requested: Optional[str] = None):
 
 
 def _list_ports():
+
+
+    """Load pySerial's serial-port enumeration helper."""
     try:
         from serial.tools import list_ports
     except ImportError as exc:
@@ -76,6 +88,9 @@ def _list_ports():
 
 
 def _run(command: list[str], timeout: int = 600) -> bool:
+
+
+    """Run an external firmware tool command with a timeout and report its result."""
     print("\n[flash] $ " + " ".join(str(part) for part in command))
     try:
         result = subprocess.run(command, check=False, timeout=timeout)
@@ -92,6 +107,9 @@ def _run(command: list[str], timeout: int = 600) -> bool:
 
 
 def _installed_platforms(cli: str) -> set[str]:
+
+
+    """Return the Arduino platforms currently installed by the selected CLI."""
     try:
         result = subprocess.run(
             [cli, "core", "list"], check=False, capture_output=True, text=True, timeout=60
@@ -110,6 +128,9 @@ def _installed_platforms(cli: str) -> set[str]:
 
 
 def _ensure_platform(cli: str, platform: str) -> bool:
+
+
+    """Check for the required Arduino platform and offer installation when missing."""
     if platform in _installed_platforms(cli):
         return True
     print(f"[flash] Arduino platform {platform} is not installed.")
@@ -125,6 +146,9 @@ def _ensure_platform(cli: str, platform: str) -> bool:
 
 
 def _confirm(port: str, identified: bool, fqbn: str, firmware: Path) -> bool:
+
+
+    """Show the selected firmware target and require confirmation before uploading."""
     print("\n" + "=" * 60)
     print("CLM-1 FIRMWARE UPLOAD — CONFIRMATION REQUIRED")
     print("=" * 60)
@@ -146,6 +170,9 @@ def _confirm(port: str, identified: bool, fqbn: str, firmware: Path) -> bool:
 
 
 def handle_flash_command(args: list[str], default_port: Optional[str] = None):
+
+
+    """Parse firmware options and coordinate compilation and USB upload."""
     try:
         options = build_parser().parse_args(args)
     except SystemExit as exc:
