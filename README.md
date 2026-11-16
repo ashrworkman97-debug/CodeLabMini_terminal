@@ -234,6 +234,8 @@ Use `help` inside CLM-1 for the built-in help. The full reference is in [COMMAND
 
 **Local terminal utilities:** `roll`, `rps`, `magic8`, `joke`, `fortune`, `time`, `uptime`, `whoami`, `ascii`, `clear`, and `credits`.
 
+The `whoami` command reports the detected host operating system/release and Python version alongside the Code Lab Mini target.
+
 ## AI Command Studio (optional)
 
 CLM-1 can use the OpenAI API to generate custom hardware macros from plain-language descriptions. For example:
