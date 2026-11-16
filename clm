@@ -6,6 +6,7 @@ import argparse
 import json
 import datetime as _datetime
 import queue
+import platform
 import random
 import shlex
 import sys
@@ -19,7 +20,7 @@ from clm_ai import (
 from clm_flash import handle_flash_command
 from clm_update import check_for_update, install_update
 
-APP_VERSION = "1.10.0"
+APP_VERSION = "1.11.0"
 DEVICE_NAME = "Code Lab Mini"
 USB_VID = 0x0403
 USB_PID = 0x6015
@@ -346,9 +347,9 @@ LOCAL TERMINAL FUN (doesn't need the Mini)
   magic8                    Ask the CLM-1 fortune teller
   joke                      Tell a programmer joke
   fortune                   Get a tiny fortune
-  time                      Show the Chromebook's current time
+  time                      Show local date and time
   uptime                    Show this CLM-1 session duration
-  whoami                    Identify the operator and device
+  whoami                    Show host OS, Python version, and target device
   ascii                     Print the CLM-1 logo
   clear                     Clear the terminal
   credits                   Show project credits
@@ -454,7 +455,21 @@ def local_command(cmd: str, args: list[str], started_at: float) -> bool:
         print(f"CLM-1 has been running for {seconds // 3600}h {(seconds % 3600) // 60}m {seconds % 60}s.")
         return True
     if cmd == "whoami":
-        print("System: CLM-1\nHost: Linux\nDevice: Let's Start Coding Code Lab Mini")
+        system = platform.system() or sys.platform
+        host_name = {
+            "Darwin": "macOS",
+            "darwin": "macOS",
+            "win32": "Windows",
+            "linux": "Linux",
+        }.get(system, system)
+        release = platform.release()
+        if release:
+            host_name = f"{host_name} {release}"
+        print(
+            f"System: CLM-1\nHost: {host_name}\n"
+            f"Python: {platform.python_version()}\n"
+            "Device: Let's Start Coding Code Lab Mini"
+        )
         return True
     if cmd == "credits":
         print("CLM-1 Command Line Manager\nHost: Python 3 + pySerial\nFirmware: ATmega328P-compatible Arduino C++\nOptional AI command generation: OpenAI API.")
