@@ -44,6 +44,13 @@ Notable changes to CLM-1 are documented here.
 - Added a `strict` field to JSON diagnostic reports and offline tests for strict text, JSON, and CLI behavior.
 - Updated Linux, macOS, and Windows installer version labels to 1.9.0.
 
+## 1.11.0 — Cross-platform Host Identification
+
+- Expanded `whoami` to report the detected host OS/release and Python version instead of assuming Linux.
+- Corrected terminal help text so the local time command is described independently of Chromebook.
+- Added offline coverage for Linux, macOS, and Windows host identification.
+- Updated the CLI, Linux/macOS/Windows installer labels, and command reference to 1.11.0.
+
 ## 1.10.0 — Multi-device Diagnostics
 
 - Updated `clm doctor` to warn when multiple matching FTDI 0403:6015 devices are visible, since firmware flashing requires an explicit target when more than one Mini is connected.
