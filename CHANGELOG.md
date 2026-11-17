@@ -46,7 +46,7 @@ Notable changes to CLM-1 are documented here.
 
 ## 1.11.0 — Cross-platform Host Identification
 
-- Expanded `whoami` to report the detected host OS/release and Python version instead of assuming Linux.
+- Expanded `whoami` to report the host OS and Python version; macOS uses its product version (not the Darwin kernel version), and Windows 11 is distinguished from Windows 10 by build number.
 - Corrected terminal help text so the local time command is described independently of Chromebook.
 - Added offline coverage for Linux, macOS, and Windows host identification.
 - Updated the CLI, Linux/macOS/Windows installer labels, and command reference to 1.11.0.
