@@ -3,6 +3,7 @@ import contextlib
 import io
 import runpy
 from pathlib import Path
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -11,34 +12,56 @@ CLI_PATH = Path(__file__).resolve().parents[1] / "clm"
 
 
 class WhoAmITests(unittest.TestCase):
-    """Verify whoami reports the actual host rather than assuming Linux."""
+    """Verify whoami reports the actual host rather than kernel aliases."""
 
     def setUp(self):
         """Load the CLI entry point without starting the interactive console."""
         self.cli = runpy.run_path(str(CLI_PATH))
 
     def test_reports_host_and_python_details_on_supported_platforms(self):
-        """Format host names consistently on Linux, macOS, and Windows."""
+        """Use product versions for macOS and distinguish Windows 10/11."""
         cases = (
-            ("Linux", "6.12", "3.13.1", "Linux 6.12"),
-            ("Darwin", "15.1", "3.12.8", "macOS 15.1"),
-            ("Windows", "11", "3.10.16", "Windows 11"),
+            ("Linux", "6.12", "3.13.1", "Linux 6.12", None, None),
+            ("Darwin", "24.1.0", "3.12.8", "macOS 15.1", "15.1", None),
+            ("Darwin", "24.1.0", "3.12.8", "macOS", "", None),
+            ("Windows", "10", "3.10.16", "Windows 11", None, 22631),
+            ("Windows", "10", "3.10.16", "Windows 10", None, 19045),
         )
-        for system, release, python_version, expected_host in cases:
-            with self.subTest(system=system):
+        for system, release, python_version, expected_host, mac_version, windows_build in cases:
+            with self.subTest(system=system, expected_host=expected_host):
                 output = io.StringIO()
-                with (
-                    patch("platform.system", return_value=system),
-                    patch("platform.release", return_value=release),
-                    patch("platform.python_version", return_value=python_version),
-                    contextlib.redirect_stdout(output),
-                ):
+                with contextlib.ExitStack() as stack:
+                    stack.enter_context(patch("platform.system", return_value=system))
+                    stack.enter_context(patch("platform.release", return_value=release))
+                    stack.enter_context(
+                        patch("platform.python_version", return_value=python_version)
+                    )
+                    if system == "Darwin":
+                        stack.enter_context(
+                            patch(
+                                "platform.mac_ver",
+                                return_value=(mac_version, ("", "", ""), "arm64"),
+                            )
+                        )
+                    if system == "Windows":
+                        stack.enter_context(
+                            patch(
+                                "sys.getwindowsversion",
+                                return_value=SimpleNamespace(
+                                    major=10, build=windows_build
+                                ),
+                                create=True,
+                            )
+                        )
+                    stack.enter_context(contextlib.redirect_stdout(output))
                     handled = self.cli["local_command"]("whoami", [], 0.0)
 
                 self.assertTrue(handled)
                 self.assertIn(f"Host: {expected_host}", output.getvalue())
                 self.assertIn(f"Python: {python_version}", output.getvalue())
-                self.assertIn("Device: Let's Start Coding Code Lab Mini", output.getvalue())
+                self.assertIn(
+                    "Device: Let's Start Coding Code Lab Mini", output.getvalue()
+                )
 
 
 if __name__ == "__main__":
