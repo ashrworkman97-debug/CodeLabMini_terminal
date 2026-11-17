@@ -429,6 +429,33 @@ def terminal_logo():
 """)
 
 
+def host_os_label() -> str:
+    """Return a user-facing OS version without confusing kernel and product versions."""
+    system = platform.system() or sys.platform
+    if system in ("Darwin", "darwin"):
+        # platform.release() is the Darwin kernel version, not the macOS version.
+        mac_version = platform.mac_ver()[0]
+        return f"macOS {mac_version}" if mac_version else "macOS"
+    if system in ("Windows", "win32"):
+        release = platform.release()
+        try:
+            windows_version = sys.getwindowsversion()
+            major = windows_version.major
+            build = windows_version.build
+        except (AttributeError, OSError):
+            pass
+        else:
+            if major == 10:
+                # Windows 11 retains NT major version 10; build 22000 is its
+                # original public baseline.
+                release = "11" if build >= 22000 else "10"
+        return f"Windows {release}" if release else "Windows"
+
+    host_name = "Linux" if system.lower() == "linux" else system
+    release = platform.release()
+    return f"{host_name} {release}" if release else host_name
+
+
 def local_command(cmd: str, args: list[str], started_at: float) -> bool:
     """Handle local-only shell toys. Return True when command was handled."""
     if cmd == "clear":
@@ -455,18 +482,8 @@ def local_command(cmd: str, args: list[str], started_at: float) -> bool:
         print(f"CLM-1 has been running for {seconds // 3600}h {(seconds % 3600) // 60}m {seconds % 60}s.")
         return True
     if cmd == "whoami":
-        system = platform.system() or sys.platform
-        host_name = {
-            "Darwin": "macOS",
-            "darwin": "macOS",
-            "win32": "Windows",
-            "linux": "Linux",
-        }.get(system, system)
-        release = platform.release()
-        if release:
-            host_name = f"{host_name} {release}"
         print(
-            f"System: CLM-1\nHost: {host_name}\n"
+            f"System: CLM-1\nHost: {host_os_label()}\n"
             f"Python: {platform.python_version()}\n"
             "Device: Let's Start Coding Code Lab Mini"
         )
