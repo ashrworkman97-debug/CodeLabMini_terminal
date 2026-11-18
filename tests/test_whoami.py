@@ -18,6 +18,35 @@ class WhoAmITests(unittest.TestCase):
         """Load the CLI entry point without starting the interactive console."""
         self.cli = runpy.run_path(str(CLI_PATH))
 
+    def test_identifies_chromeos_crostini_from_milestone_marker(self):
+        """Name the ChromeOS host when Crostini exposes its milestone marker."""
+        output = io.StringIO()
+        with (
+            patch("platform.system", return_value="Linux"),
+            patch("platform.release", return_value="6.6.44"),
+            patch("platform.python_version", return_value="3.13.1"),
+            patch("pathlib.Path.read_text", return_value="161\\n"),
+            contextlib.redirect_stdout(output),
+        ):
+            handled = self.cli["local_command"]("whoami", [], 0.0)
+
+        self.assertTrue(handled)
+        self.assertIn(
+            "Host: ChromeOS M161 (Crostini Linux; kernel 6.6.44)",
+            output.getvalue(),
+        )
+
+    def test_ignores_invalid_chromeos_milestone_marker(self):
+        """Avoid labeling ordinary Linux as ChromeOS when the marker is malformed."""
+        with (
+            patch("platform.system", return_value="Linux"),
+            patch("platform.release", return_value="6.12"),
+            patch("pathlib.Path.read_text", return_value="not-a-milestone"),
+        ):
+            label = self.cli["host_os_label"]()
+
+        self.assertEqual(label, "Linux 6.12")
+
     def test_reports_host_and_python_details_on_supported_platforms(self):
         """Use product versions for macOS and distinguish Windows 10/11."""
         cases = (
@@ -36,6 +65,10 @@ class WhoAmITests(unittest.TestCase):
                     stack.enter_context(
                         patch("platform.python_version", return_value=python_version)
                     )
+                    if system == "Linux":
+                        stack.enter_context(
+                            patch("pathlib.Path.read_text", side_effect=FileNotFoundError)
+                        )
                     if system == "Darwin":
                         stack.enter_context(
                             patch(

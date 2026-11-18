@@ -2,6 +2,13 @@
 
 Notable changes to CLM-1 are documented here.
 
+## 1.12.0 — ChromeOS Host Identification
+
+- Updated `whoami` to recognize ChromeOS Crostini through its `/dev/.cros_milestone` marker.
+- Reports the ChromeOS milestone alongside the Crostini Linux kernel release, while retaining ordinary Linux reporting when the marker is absent or invalid.
+- Added offline tests for detected, absent, and malformed ChromeOS milestone markers.
+- Updated the CLI, Linux/macOS/Windows installer labels, and command reference to 1.12.0.
+
 ## 1.4.0 — Direct Firmware Flashing
 
 - Added `clm_h@cker_init` for local Arduino CLI compilation and USB-serial firmware uploads.

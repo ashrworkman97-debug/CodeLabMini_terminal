@@ -8,6 +8,7 @@ import datetime as _datetime
 import queue
 import platform
 import random
+from pathlib import Path
 import shlex
 import sys
 import threading
@@ -20,7 +21,7 @@ from clm_ai import (
 from clm_flash import handle_flash_command
 from clm_update import check_for_update, install_update
 
-APP_VERSION = "1.11.0"
+APP_VERSION = "1.12.0"
 DEVICE_NAME = "Code Lab Mini"
 USB_VID = 0x0403
 USB_PID = 0x6015
@@ -453,6 +454,17 @@ def host_os_label() -> str:
 
     host_name = "Linux" if system.lower() == "linux" else system
     release = platform.release()
+    if host_name == "Linux":
+        # Crostini exposes the ChromeOS milestone to its Linux container here.
+        # Keep the guest kernel version visible so users can distinguish the
+        # ChromeOS host from the Debian/Linux environment running CLM-1.
+        try:
+            milestone = Path("/dev/.cros_milestone").read_text(encoding="ascii").strip()
+        except (OSError, UnicodeError):
+            milestone = ""
+        if milestone.isdecimal():
+            kernel = f"; kernel {release}" if release else ""
+            return f"ChromeOS M{milestone} (Crostini Linux{kernel})"
     return f"{host_name} {release}" if release else host_name
 
 
