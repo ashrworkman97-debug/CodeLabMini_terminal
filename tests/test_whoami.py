@@ -25,7 +25,7 @@ class WhoAmITests(unittest.TestCase):
             patch("platform.system", return_value="Linux"),
             patch("platform.release", return_value="6.6.44"),
             patch("platform.python_version", return_value="3.13.1"),
-            patch("pathlib.Path.read_text", return_value="161\\n"),
+            patch("pathlib.Path.read_text", return_value="161"),
             contextlib.redirect_stdout(output),
         ):
             handled = self.cli["local_command"]("whoami", [], 0.0)
