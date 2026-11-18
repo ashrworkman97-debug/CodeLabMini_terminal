@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Mapping, Optional
 
 def get_app_dir(home: Optional[Path] = None, system: Optional[str] = None, env: Optional[Mapping[str, str]] = None) -> Path:
+
+    """Resolve the platform-specific directory used for CLM application files."""
     home = Path(home or Path.home())
     system = system or sys.platform
     env = os.environ if env is None else env
@@ -16,6 +18,8 @@ def get_app_dir(home: Optional[Path] = None, system: Optional[str] = None, env: 
     return home / ".local" / "share" / "clm-1"
 
 def get_config_dir(home: Optional[Path] = None, system: Optional[str] = None, env: Optional[Mapping[str, str]] = None) -> Path:
+
+    """Resolve the platform-specific directory used for CLM user configuration."""
     home = Path(home or Path.home())
     system = system or sys.platform
     env = os.environ if env is None else env

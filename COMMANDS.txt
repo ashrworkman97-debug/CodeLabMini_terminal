@@ -1,4 +1,4 @@
-CLM-1 v1.6.0 — COMMAND REFERENCE
+CLM-1 v1.11.0 — COMMAND REFERENCE
 =================================
 
 START / CONNECTION
@@ -18,6 +18,7 @@ DEVICE AND CONNECTION COMMANDS
   version                     Show host and firmware protocol versions
   update                      Download and install the latest CLM-1 host update
   update check                Check GitHub for a newer host version
+  doctor [--json] [--strict]  Diagnose setup; strict mode fails on warnings (read-only)
   device                      Show the active serial device
   scan                        Scan serial devices
   ping                        Check device communication
@@ -87,7 +88,7 @@ LOCAL TERMINAL UTILITIES (NO DEVICE REQUIRED)
   fortune                     Show a short fortune
   time                        Show local date and time
   uptime                      Show CLM-1 session uptime
-  whoami                      Show CLM-1 host and target information
+  whoami                      Show host OS, Python version, and target information
   ascii                       Display the CLM-1 logo
   clear                       Clear the terminal
   credits                     Show project components

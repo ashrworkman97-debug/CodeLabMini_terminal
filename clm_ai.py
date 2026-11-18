@@ -84,6 +84,9 @@ operations, no keyboard injection, no high-power behavior, and no arbitrary pin 
 
 
 def _secure_mkdir(path: Path) -> None:
+
+
+    """Create a directory and restrict its permissions to the current user."""
     path.mkdir(parents=True, exist_ok=True)
     try:
         path.chmod(0o700)
@@ -92,6 +95,9 @@ def _secure_mkdir(path: Path) -> None:
 
 
 def _atomic_write(path: Path, content: str, mode: int = 0o600) -> None:
+
+
+    """Atomically replace a text file while applying the requested file mode."""
     _secure_mkdir(path.parent)
     fd, tmp_name = tempfile.mkstemp(prefix=path.name + ".", dir=str(path.parent))
     try:
@@ -115,6 +121,9 @@ def _atomic_write(path: Path, content: str, mode: int = 0o600) -> None:
 
 
 def load_settings() -> dict[str, Any]:
+
+
+    """Load saved AI settings, returning an empty mapping when none are usable."""
     try:
         data = json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
         return data if isinstance(data, dict) else {}
@@ -123,15 +132,24 @@ def load_settings() -> dict[str, Any]:
 
 
 def save_settings(settings: dict[str, Any]) -> None:
+
+
+    """Persist AI settings in the private application configuration directory."""
     _atomic_write(SETTINGS_FILE, json.dumps(settings, indent=2) + "\n", 0o600)
 
 
 def get_model() -> str:
+
+
+    """Return the configured model, falling back to the supported default."""
     model = str(load_settings().get("model", DEFAULT_MODEL))
     return model if MODEL_RE.fullmatch(model) else DEFAULT_MODEL
 
 
 def set_model(model: str) -> None:
+
+
+    """Validate and persist the selected model name."""
     if not MODEL_RE.fullmatch(model):
         raise ValueError("Model name may contain letters, numbers, dots, underscores, colons and hyphens.")
     settings = load_settings()
@@ -140,6 +158,9 @@ def set_model(model: str) -> None:
 
 
 def get_api_key() -> str | None:
+
+
+    """Return the API key from the environment or secure local key file."""
     env_key = os.environ.get("OPENAI_API_KEY", "").strip()
     if env_key:
         return env_key
@@ -151,6 +172,9 @@ def get_api_key() -> str | None:
 
 
 def key_source() -> str:
+
+
+    """Describe the configured API-key source without exposing the key."""
     if os.environ.get("OPENAI_API_KEY", "").strip():
         return "OPENAI_API_KEY environment variable"
     if KEY_FILE.exists():
@@ -159,6 +183,9 @@ def key_source() -> str:
 
 
 def setup_key() -> bool:
+
+
+    """Prompt for an API key, validate it, and save it securely."""
     print("OpenAI API key setup")
     print("Your key is entered locally and hidden while typing. Keep it private; do not include it in source files or support requests.")
     try:
@@ -176,6 +203,9 @@ def setup_key() -> bool:
 
 
 def forget_key() -> None:
+
+
+    """Remove the locally saved API key, if one exists."""
     try:
         KEY_FILE.unlink()
         print("Saved API key removed.")
@@ -186,6 +216,9 @@ def forget_key() -> None:
 
 
 def _http_json(url: str, api_key: str, payload: dict[str, Any] | None = None, timeout: int = 45) -> dict[str, Any]:
+
+
+    """Send an authenticated JSON request and decode its response."""
     headers = {"Authorization": "Bearer " + api_key, "Accept": "application/json"}
     data = None
     method = "GET"
@@ -217,6 +250,9 @@ def _http_json(url: str, api_key: str, payload: dict[str, Any] | None = None, ti
 
 
 def test_api_key() -> None:
+
+
+    """Verify that the configured API key can access the API."""
     key = get_api_key()
     if not key:
         raise RuntimeError("No API key is configured. Run `ai setup` first.")
@@ -229,6 +265,9 @@ def test_api_key() -> None:
 
 
 def _extract_output_text(response: dict[str, Any]) -> str:
+
+
+    """Extract generated text from a Responses API payload."""
     if response.get("status") == "incomplete":
         reason = response.get("incomplete_details") or {}
         raise RuntimeError(f"AI response was incomplete ({reason.get('reason', 'unknown reason')}). Try a shorter request.")
@@ -251,6 +290,9 @@ def _extract_output_text(response: dict[str, Any]) -> str:
 
 
 def validate_definition(value: Any) -> dict[str, Any]:
+
+
+    """Validate the structure and supported actions in a custom-command definition."""
     if not isinstance(value, dict) or set(value) != {"name", "description", "steps"}:
         raise ValueError("AI output must contain only name, description, and steps.")
     name = value["name"]
@@ -335,6 +377,9 @@ def validate_definition(value: Any) -> dict[str, Any]:
 
 
 def create_definition(description: str) -> dict[str, Any]:
+
+
+    """Generate a custom-command definition from a natural-language description."""
     if not description.strip():
         raise ValueError("Describe the command after `ai create`.")
     if len(description) > 500:
@@ -372,6 +417,9 @@ def create_definition(description: str) -> dict[str, Any]:
 
 
 def load_commands() -> dict[str, dict[str, Any]]:
+
+
+    """Load and validate the saved custom-command definitions."""
     try:
         root = json.loads(COMMANDS_FILE.read_text(encoding="utf-8"))
     except FileNotFoundError:
@@ -394,6 +442,9 @@ def load_commands() -> dict[str, dict[str, Any]]:
 
 
 def save_commands(commands: dict[str, dict[str, Any]]) -> None:
+
+
+    """Validate and securely persist custom-command definitions."""
     _secure_mkdir(APP_DIR)
     stored: dict[str, dict[str, Any]] = {}
     for name, definition in commands.items():
@@ -409,6 +460,9 @@ def save_commands(commands: dict[str, dict[str, Any]]) -> None:
 
 
 def preview(definition: dict[str, Any]) -> None:
+
+
+    """Display a custom command's description and estimated execution time."""
     print(f"\nAI command: {definition['name']}")
     print(definition["description"])
     print(f"Estimated run time: {definition.get('estimated_ms', 0) / 1000:.1f} seconds")
@@ -431,6 +485,9 @@ def preview(definition: dict[str, Any]) -> None:
 
 
 def step_to_device_command(step: dict[str, Any]) -> tuple[str | None, float]:
+
+
+    """Translate one validated action step into a device command and delay."""
     action = step["action"]
     if action == "led":
         return f"LED {step['led']} {step['state'].upper()}", 0.08
@@ -461,6 +518,9 @@ RESERVED_COMMANDS = {
 
 
 def _confirm(prompt: str) -> bool:
+
+
+    """Ask the user to confirm an operation, treating interrupted input as a refusal."""
     try:
         answer = input(prompt).strip().lower()
     except (EOFError, KeyboardInterrupt):
@@ -470,6 +530,9 @@ def _confirm(prompt: str) -> bool:
 
 
 def handle_ai_command(args: list[str]) -> bool:
+
+
+    """Dispatch AI setup, model, key, and command-generation requests."""
     if not args or args[0].lower() in ("help", "?"):
         print("""AI COMMAND BUILDER
   ai setup                 Enter and securely save an OpenAI API key
@@ -561,6 +624,9 @@ Python, C++, arbitrary serial data, or access Chromebook files.""")
 
 
 def handle_custom_command(args: list[str], link: Any) -> bool:
+
+
+    """Dispatch custom-command listing, inspection, and execution requests."""
     if not args or args[0].lower() in ("help", "list"):
         commands = load_commands()
         print("Saved CLM custom commands:")
@@ -600,6 +666,9 @@ def handle_custom_command(args: list[str], link: Any) -> bool:
 
 
 def run_custom_command(definition: dict[str, Any], link: Any) -> None:
+
+
+    """Execute a validated custom-command sequence through the active device link."""
     if link is None or not getattr(getattr(link, "ser", None), "is_open", False):
         print("[custom] Connect the Code Lab Mini before running hardware commands.")
         return

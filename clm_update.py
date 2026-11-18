@@ -16,13 +16,14 @@ from clm_paths import APP_DIR, CONFIG_DIR
 REPO = "ashrworkman97-debug/CodeLabMini_terminal"
 RAW_CLI = f"https://raw.githubusercontent.com/{REPO}/main/clm"
 ARCHIVE = f"https://codeload.github.com/{REPO}/zip/refs/heads/main"
-CORE_FILES = ("clm", "clm_ai.py", "clm_flash.py", "clm_paths.py", "clm_update.py")
+CORE_FILES = ("clm", "clm_ai.py", "clm_flash.py", "clm_paths.py", "clm_doctor.py", "clm_update.py")
 DATA_FILES = ("clm_firmware.ino", "README.md", "COMMANDS.txt", "CHANGELOG.md",
               "TERMS_OF_USE.md", "requirements.txt", "install.sh",
               "install_macos.sh", "install_windows.ps1")
 
 
 def _latest_version(timeout: float = 2.0) -> str | None:
+    """Fetch the current CLI source and extract its declared application version."""
     request = urllib.request.Request(RAW_CLI, headers={"User-Agent": "CLM-1 updater"})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         source = response.read(2_000_000).decode("utf-8")
@@ -31,6 +32,7 @@ def _latest_version(timeout: float = 2.0) -> str | None:
 
 
 def _version_tuple(value: str) -> tuple[int, ...]:
+    """Convert a dotted numeric version into a tuple suitable for comparison."""
     try:
         return tuple(int(part) for part in value.split("."))
     except ValueError:
