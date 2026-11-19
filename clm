@@ -350,7 +350,7 @@ LOCAL TERMINAL FUN (doesn't need the Mini)
   fortune                   Get a tiny fortune
   time                      Show local date and time
   uptime                    Show this CLM-1 session duration
-  whoami                    Show host OS, Python version, and target device
+  whoami                    Show Linux distro/ChromeOS host, Python, and target device
   ascii                     Print the CLM-1 logo
   clear                     Clear the terminal
   credits                   Show project credits
