@@ -2,6 +2,13 @@
 
 Notable changes to CLM-1 are documented here.
 
+## 1.13.0 — Linux Distribution Identification
+
+- Updated Linux `whoami` reporting to use `PRETTY_NAME` from `/etc/os-release`, identifying distributions such as Linux Mint, Debian, and Ubuntu by their product name instead of only their kernel release.
+- Kept ChromeOS Crostini milestone detection as the higher-priority host label, with kernel-release fallback when distribution metadata is unavailable.
+- Added offline tests for Linux distribution identification and unavailable `os-release` metadata.
+- Updated the CLI, Linux/macOS/Windows installer labels, and command reference to 1.13.0.
+
 ## 1.12.0 — ChromeOS Host Identification
 
 - Updated `whoami` to recognize ChromeOS Crostini through its `/dev/.cros_milestone` marker.
