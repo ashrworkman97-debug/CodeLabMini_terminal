@@ -234,7 +234,7 @@ Use `help` inside CLM-1 for the built-in help. The full reference is in [COMMAND
 
 **Local terminal utilities:** `roll`, `rps`, `magic8`, `joke`, `fortune`, `time`, `uptime`, `whoami`, `ascii`, `clear`, and `credits`.
 
-The `whoami` command reports the detected host operating system/release and Python version alongside the Code Lab Mini target. In ChromeOS Linux (Crostini), it recognizes the ChromeOS milestone when `/dev/.cros_milestone` is available and also shows the guest Linux kernel release.
+The `whoami` command reports the host operating system and Python version alongside the Code Lab Mini target. On Linux, it uses `PRETTY_NAME` from `/etc/os-release` when available (for example, `Linux Mint 22.2`) instead of showing only the kernel release. In ChromeOS Linux (Crostini), the ChromeOS milestone takes precedence and the guest Linux kernel release is also shown.
 
 ## AI Command Studio (optional)
 
