@@ -21,7 +21,7 @@ from clm_ai import (
 from clm_flash import handle_flash_command
 from clm_update import check_for_update, install_update
 
-APP_VERSION = "1.12.0"
+APP_VERSION = "1.13.0"
 DEVICE_NAME = "Code Lab Mini"
 USB_VID = 0x0403
 USB_PID = 0x6015
@@ -465,6 +465,13 @@ def host_os_label() -> str:
         if milestone.isdecimal():
             kernel = f"; kernel {release}" if release else ""
             return f"ChromeOS M{milestone} (Crostini Linux{kernel})"
+        try:
+            os_release = platform.freedesktop_os_release()
+        except (OSError, UnicodeError):
+            os_release = {}
+        pretty_name = os_release.get("PRETTY_NAME", "").strip()
+        if pretty_name:
+            return pretty_name
     return f"{host_name} {release}" if release else host_name
 
 
