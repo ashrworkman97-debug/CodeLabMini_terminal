@@ -75,6 +75,21 @@ class WhoAmITests(unittest.TestCase):
 
         self.assertEqual(label, "Linux Mint 22.2")
 
+    def test_falls_back_to_linux_name_and_version_id_without_pretty_name(self):
+        """Use NAME and VERSION_ID when os-release omits optional PRETTY_NAME."""
+        with (
+            patch("platform.system", return_value="Linux"),
+            patch("platform.release", return_value="6.11.0"),
+            patch("pathlib.Path.read_text", side_effect=FileNotFoundError),
+            patch(
+                "platform.freedesktop_os_release",
+                return_value={"NAME": "Fedora Linux", "VERSION_ID": "42"},
+            ),
+        ):
+            label = self.cli["host_os_label"]()
+
+        self.assertEqual(label, "Fedora Linux 42")
+
     def test_reports_host_and_python_details_on_supported_platforms(self):
         """Use product versions for macOS and distinguish Windows 10/11."""
         cases = (
