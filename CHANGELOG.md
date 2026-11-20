@@ -2,6 +2,21 @@
 
 Notable changes to CLM-1 are documented here.
 
+## 1.13.0 — Linux Distribution Identification
+
+- Updated Linux `whoami` reporting to prefer `PRETTY_NAME` from `/etc/os-release`, with a `NAME` + `VERSION_ID` fallback for valid files that omit the optional pretty name.
+- Identifies distributions such as Linux Mint, Debian, Fedora, and Ubuntu by their product name instead of only their kernel release.
+- Kept ChromeOS Crostini milestone detection as the higher-priority host label, with kernel-release fallback when distribution metadata is unavailable.
+- Added offline tests for Linux distribution identification and unavailable `os-release` metadata.
+- Updated the CLI, Linux/macOS/Windows installer labels, and command reference to 1.13.0.
+
+## 1.12.0 — ChromeOS Host Identification
+
+- Updated `whoami` to recognize ChromeOS Crostini through its `/dev/.cros_milestone` marker.
+- Reports the ChromeOS milestone alongside the Crostini Linux kernel release, while retaining ordinary Linux reporting when the marker is absent or invalid.
+- Added offline tests for detected, absent, and malformed ChromeOS milestone markers.
+- Updated the CLI, Linux/macOS/Windows installer labels, and command reference to 1.12.0.
+
 ## 1.4.0 — Direct Firmware Flashing
 
 - Added `clm_h@cker_init` for local Arduino CLI compilation and USB-serial firmware uploads.
