@@ -2,6 +2,13 @@
 
 Notable changes to CLM-1 are documented here.
 
+## 1.14.0 — Safer Self-Updates
+
+- Validate that every required CLM-1 core module is present in the downloaded update archive before replacing any installed files.
+- Reject incomplete archives before touching the existing CLI installation, preventing partial updates from silently omitting modules needed at startup.
+- Added offline tests for complete and incomplete archives and verified that missing required modules cause no installed files to be copied or changed.
+- Updated the CLI, Linux/macOS/Windows installer labels, and command reference to 1.14.0.
+
 ## 1.13.0 — Linux Distribution Identification
 
 - Updated Linux `whoami` reporting to prefer `PRETTY_NAME` from `/etc/os-release`, with a `NAME` + `VERSION_ID` fallback for valid files that omit the optional pretty name.

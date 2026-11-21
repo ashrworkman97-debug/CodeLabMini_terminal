@@ -69,6 +69,17 @@ def check_for_update(current_version: str, *, silent: bool = False,
         return False
 
 
+def _validate_source_tree(source_root: Path) -> None:
+    """Reject incomplete update archives before modifying the installed application."""
+    missing = [name for name in CORE_FILES if not (source_root / name).is_file()]
+    if missing:
+        names = ", ".join(missing)
+        raise RuntimeError(
+            "Update archive is incomplete; missing required core files: "
+            f"{names}. No installed files were changed."
+        )
+
+
 def install_update() -> int:
     """Download the latest source archive and replace the installed CLM-1 files."""
     print("[update] Checking GitHub and downloading the latest CLM-1...")
@@ -90,6 +101,7 @@ def install_update() -> int:
                         raise RuntimeError("Unsafe path found in update archive.")
                 archive.extractall(root)
             source_root = next(root.iterdir())
+            _validate_source_tree(source_root)
             code_dir = Path(__file__).resolve().parent
             app_dir = Path(APP_DIR)
             app_dir.mkdir(parents=True, exist_ok=True)
