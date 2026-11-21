@@ -80,3 +80,44 @@ jobs:
           python clm --help
           python clm doctor
           python clm doctor --json
+
+  windows-install-smoke:
+    name: Windows installer and installed CLI smoke test
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Run the real per-user Windows installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          & .\install_windows.ps1
+          if ($LASTEXITCODE -ne 0) {
+            throw "Windows installer exited with code $LASTEXITCODE"
+          }
+
+      - name: Verify installed files and launch the installed CLI
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $appDir = Join-Path $env:LOCALAPPDATA "CLM-1"
+          $required = @("clm", "clm.cmd", "clm_ai.py", "clm_flash.py", "clm_paths.py", "clm_doctor.py", "clm_update.py", "requirements.txt")
+          foreach ($file in $required) {
+            $path = Join-Path $appDir $file
+            if (-not (Test-Path $path -PathType Leaf)) {
+              throw "Installed file is missing: $path"
+            }
+          }
+          & (Join-Path $appDir "clm.cmd") --version
+          if ($LASTEXITCODE -ne 0) { throw "Installed CLI --version failed" }
+          & (Join-Path $appDir "clm.cmd") --help
+          if ($LASTEXITCODE -ne 0) { throw "Installed CLI --help failed" }
+          & (Join-Path $appDir "clm.cmd") doctor --json
+          if ($LASTEXITCODE -ne 0) { throw "Installed CLI doctor --json failed" }
+          Write-Host "Windows per-user installation and installed CLI smoke test passed."
