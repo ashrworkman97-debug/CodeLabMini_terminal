@@ -476,6 +476,8 @@ def host_os_label() -> str:
         # when a system provides only NAME and VERSION_ID.
         distribution_name = os_release.get("NAME", "").strip()
         version_id = os_release.get("VERSION_ID", "").strip()
+        if not version_id:
+            version_id = os_release.get("VERSION", "").strip()
         if distribution_name:
             return f"{distribution_name} {version_id}".strip()
     return f"{host_name} {release}" if release else host_name
