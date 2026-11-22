@@ -95,6 +95,10 @@ jobs:
 
       - name: Run the real per-user Windows installer
         shell: pwsh
+        env:
+          # The py launcher otherwise selects the runner's newest installed
+          # Python (which can differ from the version selected by setup-python).
+          PY_PYTHON3: "3.13"
         run: |
           $ErrorActionPreference = "Stop"
           & .\install_windows.ps1
@@ -114,6 +118,16 @@ jobs:
               throw "Installed file is missing: $path"
             }
           }
+          $venvPython = Join-Path $appDir ".venv\\Scripts\\python.exe"
+          if (-not (Test-Path $venvPython -PathType Leaf)) {
+            throw "Installed virtual-environment Python is missing: $venvPython"
+          }
+          $installedPython = & $venvPython -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
+          if ($LASTEXITCODE -ne 0) { throw "Could not inspect the installed Python version" }
+          if ($installedPython -ne "3.13") {
+            throw "Expected the installer to use Python 3.13, but the installed environment uses $installedPython."
+          }
+          Write-Host "Installed virtual environment uses Python $installedPython."
           & (Join-Path $appDir "clm.cmd") --version
           if ($LASTEXITCODE -ne 0) { throw "Installed CLI --version failed" }
           & (Join-Path $appDir "clm.cmd") --help
