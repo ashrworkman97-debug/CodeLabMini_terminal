@@ -118,7 +118,7 @@ jobs:
               throw "Installed file is missing: $path"
             }
           }
-          $venvPython = Join-Path $appDir ".venv\\Scripts\\python.exe"
+          $venvPython = Join-Path $appDir ".venv\Scripts\python.exe"
           if (-not (Test-Path $venvPython -PathType Leaf)) {
             throw "Installed virtual-environment Python is missing: $venvPython"
           }
