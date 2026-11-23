@@ -135,3 +135,29 @@ jobs:
           & (Join-Path $appDir "clm.cmd") doctor --json
           if ($LASTEXITCODE -ne 0) { throw "Installed CLI doctor --json failed" }
           Write-Host "Windows per-user installation and installed CLI smoke test passed."
+
+      - name: Verify installer falls back from an unsupported py launcher
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $testRoot = Join-Path $env:RUNNER_TEMP "clm-python-fallback"
+          $fakeBin = Join-Path $testRoot "bin"
+          $env:LOCALAPPDATA = Join-Path $testRoot "localappdata"
+          New-Item -ItemType Directory -Force -Path $fakeBin, $env:LOCALAPPDATA | Out-Null
+          $fakePy = Join-Path $fakeBin "py.cmd"
+          Set-Content -Encoding ASCII -Path $fakePy -Value "@echo off`r`nexit /b 1"
+          $env:PATH = "$fakeBin;$env:PATH"
+          & .\\install_windows.ps1
+          if ($LASTEXITCODE -ne 0) { throw "Windows installer fallback test failed." }
+          $appDir = Join-Path $env:LOCALAPPDATA "CLM-1"
+          $venvPython = Join-Path $appDir ".venv\\Scripts\\python.exe"
+          if (-not (Test-Path $venvPython -PathType Leaf)) {
+            throw "Fallback installer did not create its Python environment."
+          }
+          $installedPython = & $venvPython -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
+          if ($LASTEXITCODE -ne 0 -or $installedPython -ne "3.13") {
+            throw "Expected fallback to setup-python 3.13, but found $installedPython."
+          }
+          & (Join-Path $appDir "clm.cmd") --version
+          if ($LASTEXITCODE -ne 0) { throw "CLI failed after Python launcher fallback." }
+          Write-Host "Windows installer successfully fell back to the compatible python command."
