@@ -8,6 +8,7 @@ Notable changes to CLM-1 are documented here.
 - Reject incomplete archives before touching the existing CLI installation, preventing partial updates from silently omitting modules needed at startup.
 - Added offline tests for complete and incomplete archives and verified that missing required modules cause no installed files to be copied or changed.
 - Updated the CLI, Linux/macOS/Windows installer labels, and command reference to 1.14.0.
+- The Windows installer checks that its selected interpreter is Python 3.10 or newer and falls back from an unsupported `py -3` launcher to a compatible `python` command; CI exercises the fallback.
 
 ## 1.13.0 — Linux Distribution Identification
 
