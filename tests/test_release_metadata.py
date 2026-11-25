@@ -55,19 +55,19 @@ class ReleaseMetadataTests(unittest.TestCase):
     def test_readme_documents_the_ci_python_matrix(self):
         """Keep the documented Python versions aligned with the cross-platform CI matrix."""
         workflow = read_project_file(".github/workflows/ci.yml")
-        matrix = re.search(r"(?m)^\\s*python-version:\\s*\\[([^\\]]+)\\]", workflow)
+        matrix = re.search(r"(?m)^\s*python-version:\s*\[([^\]]+)\]", workflow)
         self.assertIsNotNone(matrix, "Python version matrix missing from GitHub Actions")
-        versions = re.findall(r'"(3\\.\\d+)"', matrix.group(1))
+        versions = re.findall(r'"(3\.\d+)"', matrix.group(1))
         self.assertTrue(versions, "No Python versions found in the CI matrix")
 
         readme = read_project_file("README.md")
         documented = re.search(
             r"GitHub Actions runs the Python checks on Linux, Windows, and macOS "
-            r"with Python (.+?)\\. Firmware compilation",
+            r"with Python (.+?)\. Firmware compilation",
             readme,
         )
         self.assertIsNotNone(documented, "README CI matrix description is missing")
-        documented_versions = re.findall(r"3\\.\\d+", documented.group(1))
+        documented_versions = re.findall(r"3\.\d+", documented.group(1))
         self.assertEqual(documented_versions, versions)
 
     def test_new_updater_copies_the_diagnostic_module(self):
