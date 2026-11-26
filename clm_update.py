@@ -4,12 +4,13 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import stat
 import sys
 import tempfile
 import time
 import urllib.request
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from clm_paths import APP_DIR, CONFIG_DIR
 
@@ -20,6 +21,10 @@ CORE_FILES = ("clm", "clm_ai.py", "clm_flash.py", "clm_paths.py", "clm_doctor.py
 DATA_FILES = ("clm_firmware.ino", "README.md", "COMMANDS.txt", "CHANGELOG.md",
               "TERMS_OF_USE.md", "requirements.txt", "install.sh",
               "install_macos.sh", "install_windows.ps1")
+MAX_ARCHIVE_BYTES = 20 * 1024 * 1024
+MAX_ARCHIVE_MEMBERS = 512
+MAX_ARCHIVE_UNCOMPRESSED_BYTES = 64 * 1024 * 1024
+ARCHIVE_READ_CHUNK_BYTES = 64 * 1024
 
 
 def _latest_version(timeout: float = 2.0) -> str | None:
@@ -80,14 +85,81 @@ def _validate_source_tree(source_root: Path) -> None:
         )
 
 
+def _extract_archive_safely(archive: zipfile.ZipFile, destination: Path) -> None:
+    """Extract a ZIP into a temporary directory with path and size limits."""
+    members = archive.infolist()
+    if len(members) > MAX_ARCHIVE_MEMBERS:
+        raise RuntimeError("Update archive contains too many entries; refusing to install it.")
+
+    declared_size = 0
+    for member in members:
+        if member.file_size < 0:
+            raise RuntimeError("Update archive contains an invalid file size.")
+        declared_size += member.file_size
+        if declared_size > MAX_ARCHIVE_UNCOMPRESSED_BYTES:
+            raise RuntimeError(
+                "Update archive expands beyond the 64 MiB safety limit; refusing to install it."
+            )
+
+    root = Path(destination)
+    root.mkdir(parents=True, exist_ok=True)
+    seen_paths = set()
+    actual_size = 0
+
+    for member in members:
+        name = member.filename
+        if not name or "\x00" in name or "\\" in name:
+            raise RuntimeError("Unsafe path found in update archive.")
+        posix_path = PurePosixPath(name)
+        windows_path = PureWindowsPath(name)
+        parts = posix_path.parts
+        if (not parts or posix_path.is_absolute() or windows_path.is_absolute()
+                or windows_path.drive or ".." in parts
+                or any(":" in part for part in parts)):
+            raise RuntimeError("Unsafe path found in update archive.")
+
+        relative_name = "/".join(parts).casefold()
+        if relative_name in seen_paths:
+            raise RuntimeError(f"Duplicate path found in update archive: {name}")
+        seen_paths.add(relative_name)
+
+        mode = member.external_attr >> 16
+        kind = stat.S_IFMT(mode)
+        if kind not in (0, stat.S_IFREG, stat.S_IFDIR):
+            raise RuntimeError(f"Unsupported special file in update archive: {name}")
+
+        target = root.joinpath(*parts)
+        if member.is_dir() or kind == stat.S_IFDIR:
+            target.mkdir(parents=True, exist_ok=True)
+            continue
+
+        target.parent.mkdir(parents=True, exist_ok=True)
+        member_size = 0
+        with archive.open(member) as source, target.open("xb") as output:
+            while True:
+                chunk = source.read(ARCHIVE_READ_CHUNK_BYTES)
+                if not chunk:
+                    break
+                member_size += len(chunk)
+                actual_size += len(chunk)
+                if actual_size > MAX_ARCHIVE_UNCOMPRESSED_BYTES:
+                    raise RuntimeError(
+                        "Update archive expands beyond the 64 MiB safety limit; refusing to install it."
+                    )
+                output.write(chunk)
+
+        if member_size != member.file_size:
+            raise RuntimeError(f"Update archive entry size did not match its metadata: {name}")
+
+
 def install_update() -> int:
     """Download the latest source archive and replace the installed CLM-1 files."""
     print("[update] Checking GitHub and downloading the latest CLM-1...")
     try:
         request = urllib.request.Request(ARCHIVE, headers={"User-Agent": "CLM-1 updater"})
         with urllib.request.urlopen(request, timeout=30) as response:
-            archive_data = response.read(20 * 1024 * 1024 + 1)
-        if len(archive_data) > 20 * 1024 * 1024:
+            archive_data = response.read(MAX_ARCHIVE_BYTES + 1)
+        if len(archive_data) > MAX_ARCHIVE_BYTES:
             raise RuntimeError("Update archive is unexpectedly large; refusing to install it.")
         with tempfile.TemporaryDirectory(prefix="clm-update-") as temp:
             archive_path = Path(temp) / "source.zip"
@@ -95,12 +167,13 @@ def install_update() -> int:
             with zipfile.ZipFile(archive_path) as archive:
                 root = Path(temp) / "source"
                 root.mkdir()
-                for member in archive.infolist():
-                    target = (root / member.filename).resolve()
-                    if root.resolve() not in target.parents and target != root.resolve():
-                        raise RuntimeError("Unsafe path found in update archive.")
-                archive.extractall(root)
-            source_root = next(root.iterdir())
+                _extract_archive_safely(archive, root)
+            entries = list(root.iterdir())
+            if len(entries) != 1 or not entries[0].is_dir():
+                raise RuntimeError(
+                    "Update archive has an unexpected layout; expected one top-level source directory."
+                )
+            source_root = entries[0]
             _validate_source_tree(source_root)
             code_dir = Path(__file__).resolve().parent
             app_dir = Path(APP_DIR)

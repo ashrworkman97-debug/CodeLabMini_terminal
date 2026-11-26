@@ -93,7 +93,7 @@ bash install.sh
 source ~/.bashrc
 ```
 
-Launch the console with `clm`, or connect immediately with `clm device clm`. CLM-1 quietly checks GitHub for a newer host version at startup (at most once per day). If one is available, run `clm update` to download and install it, then close and reopen CLM-1. Use `clm update check` to check manually. Before replacing installed files, the updater verifies that the downloaded archive contains every required core module; incomplete archives are rejected without changing the existing installation. This updates the host software; firmware updates still require `clm_h@cker_init`.
+Launch the console with `clm`, or connect immediately with `clm device clm`. CLM-1 quietly checks GitHub for a newer host version at startup (at most once per day). If one is available, run `clm update` to download and install it, then close and reopen CLM-1. Use `clm update check` to check manually. Before replacing installed files, the updater safely extracts the archive, rejects path traversal and symbolic-link entries, enforces a 64 MiB expanded-size limit, and verifies every required core module; unsafe, oversized, or incomplete archives are rejected without changing the existing installation. This updates the host software; firmware updates still require `clm_h@cker_init`.
 
 ### Windows and macOS
 
