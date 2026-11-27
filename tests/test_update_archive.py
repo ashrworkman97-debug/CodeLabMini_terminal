@@ -1,6 +1,8 @@
 """Offline regression tests for safe CLM-1 self-update archive validation."""
+import builtins
 import contextlib
 import io
+import runpy
 import tempfile
 import unittest
 import zipfile
@@ -163,6 +165,127 @@ class UpdateArchiveTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "too many entries"):
                     clm_update._extract_archive_safely(archive, Path(directory) / "source")
         archive.open.assert_not_called()
+
+
+    def test_transactional_replacement_updates_all_files(self):
+        """Install every staged file when all replacements succeed."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source_a = root / "new-a"
+            source_b = root / "new-b"
+            target_a = root / "app" / "a"
+            target_b = root / "app" / "b"
+            target_a.parent.mkdir()
+            source_a.write_text("new a", encoding="utf-8")
+            source_b.write_text("new b", encoding="utf-8")
+            target_a.write_text("old a", encoding="utf-8")
+            target_b.write_text("old b", encoding="utf-8")
+
+            clm_update._replace_files_transactionally([
+                (source_a, target_a), (source_b, target_b),
+            ])
+
+            self.assertEqual(target_a.read_text(encoding="utf-8"), "new a")
+            self.assertEqual(target_b.read_text(encoding="utf-8"), "new b")
+            self.assertEqual({path.name for path in target_a.parent.iterdir()}, {"a", "b"})
+
+    def test_staging_failure_leaves_existing_files_untouched(self):
+        """Do not replace any destination until every source has been staged."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source_a, source_b = root / "new-a", root / "new-b"
+            target_a, target_b = root / "app" / "a", root / "app" / "b"
+            target_a.parent.mkdir()
+            source_a.write_text("new a", encoding="utf-8")
+            source_b.write_text("new b", encoding="utf-8")
+            target_a.write_text("old a", encoding="utf-8")
+            target_b.write_text("old b", encoding="utf-8")
+            real_copy = clm_update.shutil.copy2
+            calls = 0
+
+            def fail_second_copy(source, destination, *args, **kwargs):
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    raise OSError("simulated staging failure")
+                return real_copy(source, destination, *args, **kwargs)
+
+            with patch("clm_update.shutil.copy2", side_effect=fail_second_copy):
+                with self.assertRaisesRegex(OSError, "staging failure"):
+                    clm_update._replace_files_transactionally([
+                        (source_a, target_a), (source_b, target_b),
+                    ])
+
+            self.assertEqual(target_a.read_text(encoding="utf-8"), "old a")
+            self.assertEqual(target_b.read_text(encoding="utf-8"), "old b")
+            self.assertEqual({path.name for path in target_a.parent.iterdir()}, {"a", "b"})
+
+    def test_replacement_failure_rolls_back_prior_files(self):
+        """Restore old files if a later atomic replacement fails."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source_a, source_b = root / "new-a", root / "new-b"
+            target_a, target_b = root / "app" / "a", root / "app" / "b"
+            target_a.parent.mkdir()
+            source_a.write_text("new a", encoding="utf-8")
+            source_b.write_text("new b", encoding="utf-8")
+            target_a.write_text("old a", encoding="utf-8")
+            target_b.write_text("old b", encoding="utf-8")
+            real_replace = clm_update.os.replace
+            calls = 0
+
+            def fail_fourth_replace(source, destination):
+                nonlocal calls
+                calls += 1
+                if calls == 4:
+                    raise OSError("simulated replacement failure")
+                return real_replace(source, destination)
+
+            with patch("clm_update.os.replace", side_effect=fail_fourth_replace):
+                with self.assertRaisesRegex(OSError, "replacement failure"):
+                    clm_update._replace_files_transactionally([
+                        (source_a, target_a), (source_b, target_b),
+                    ])
+
+            self.assertEqual(target_a.read_text(encoding="utf-8"), "old a")
+            self.assertEqual(target_b.read_text(encoding="utf-8"), "old b")
+            self.assertEqual({path.name for path in target_a.parent.iterdir()}, {"a", "b"})
+
+    def test_legacy_update_missing_doctor_module_gets_recovery_guidance(self):
+        """Keep the 1.6.0-to-1.7.0 first update usable before doctor is copied."""
+        entrypoint = Path(__file__).resolve().parents[1] / "clm"
+        namespace = runpy.run_path(str(entrypoint))
+        run_doctor = namespace["run_doctor"]
+        original_import = builtins.__import__
+
+        def without_new_doctor(name, *args, **kwargs):
+            if name == "clm_doctor":
+                raise ModuleNotFoundError("No module named 'clm_doctor'", name="clm_doctor")
+            return original_import(name, *args, **kwargs)
+
+        output = io.StringIO()
+        with patch("builtins.__import__", side_effect=without_new_doctor):
+            with contextlib.redirect_stdout(output):
+                result = run_doctor()
+
+        self.assertEqual(result, 1)
+        self.assertIn("Run `clm update` once more", output.getvalue())
+
+    def test_legacy_doctor_fallback_does_not_hide_other_import_errors(self):
+        """Only a missing doctor module gets the legacy-update recovery message."""
+        entrypoint = Path(__file__).resolve().parents[1] / "clm"
+        namespace = runpy.run_path(str(entrypoint))
+        run_doctor = namespace["run_doctor"]
+        original_import = builtins.__import__
+
+        def with_missing_dependency(name, *args, **kwargs):
+            if name == "clm_doctor":
+                raise ModuleNotFoundError("No module named 'serial'", name="serial")
+            return original_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=with_missing_dependency):
+            with self.assertRaisesRegex(ModuleNotFoundError, "serial"):
+                run_doctor()
 
 
 if __name__ == "__main__":
