@@ -251,6 +251,39 @@ class UpdateArchiveTests(unittest.TestCase):
             self.assertEqual(target_b.read_text(encoding="utf-8"), "old b")
             self.assertEqual({path.name for path in target_a.parent.iterdir()}, {"a", "b"})
 
+    def test_failed_rollback_retains_the_original_backup(self):
+        """Preserve the old file if the filesystem also blocks rollback."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source_a, source_b = root / "new-a", root / "new-b"
+            target_a, target_b = root / "app" / "a", root / "app" / "b"
+            target_a.parent.mkdir()
+            source_a.write_text("new a", encoding="utf-8")
+            source_b.write_text("new b", encoding="utf-8")
+            target_a.write_text("old a", encoding="utf-8")
+            target_b.write_text("old b", encoding="utf-8")
+            real_replace = clm_update.os.replace
+            calls = 0
+
+            def fail_install_and_rollback(source, destination):
+                nonlocal calls
+                calls += 1
+                if calls in (4, 5):
+                    raise OSError("simulated filesystem failure")
+                return real_replace(source, destination)
+
+            with patch("clm_update.os.replace", side_effect=fail_install_and_rollback):
+                with self.assertRaisesRegex(RuntimeError, "rollback was incomplete"):
+                    clm_update._replace_files_transactionally([
+                        (source_a, target_a), (source_b, target_b),
+                    ])
+
+            self.assertEqual(target_a.read_text(encoding="utf-8"), "old a")
+            self.assertFalse(target_b.exists())
+            backups = list(target_b.parent.glob(".b.clm-backup-*"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_text(encoding="utf-8"), "old b")
+
     def test_legacy_update_missing_doctor_module_gets_recovery_guidance(self):
         """Keep the 1.6.0-to-1.7.0 first update usable before doctor is copied."""
         entrypoint = Path(__file__).resolve().parents[1] / "clm"
