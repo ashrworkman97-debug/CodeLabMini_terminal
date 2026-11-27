@@ -265,11 +265,11 @@ def install_update() -> int:
                 if source.is_file():
                     install_files.append((source, app_dir / name))
             version_match = re.search(
-                r'^APP_VERSION\\s*=\\s*["\\']([^"\\']+)["\\']',
+                r'^APP_VERSION\s*=\s*["\']([^"\']+)["\']',
                 (source_root / "clm").read_text(encoding="utf-8"), re.M)
             if version_match:
                 version_source = Path(temp) / "VERSION"
-                version_source.write_text(version_match.group(1) + "\\n", encoding="utf-8")
+                version_source.write_text(version_match.group(1) + "\n", encoding="utf-8")
                 install_files.append((version_source, app_dir / "VERSION"))
             _replace_files_transactionally(install_files)
         try:
