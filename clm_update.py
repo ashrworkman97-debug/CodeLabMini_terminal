@@ -197,7 +197,10 @@ def _replace_files_transactionally(files: list[tuple[Path, Path]]) -> None:
                 installed.append(destination)
         except Exception as install_error:
             rollback_errors = []
+            backed_up_targets = {destination for _backup_path, destination in backups}
             for destination in reversed(installed):
+                if destination in backed_up_targets:
+                    continue
                 try:
                     destination.unlink(missing_ok=True)
                 except OSError as exc:
@@ -229,6 +232,7 @@ def _replace_files_transactionally(files: list[tuple[Path, Path]]) -> None:
                     backup_path.unlink(missing_ok=True)
                 except OSError:
                     pass
+
 
 def install_update() -> int:
     """Download the latest source archive and replace the installed CLM-1 files."""
