@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import stat
@@ -152,6 +153,83 @@ def _extract_archive_safely(archive: zipfile.ZipFile, destination: Path) -> None
             raise RuntimeError(f"Update archive entry size did not match its metadata: {name}")
 
 
+
+def _replace_files_transactionally(files: list[tuple[Path, Path]]) -> None:
+    """Stage all files, then replace them with best-effort rollback on failure."""
+    staged: list[tuple[Path, Path]] = []
+    backups: list[tuple[Path, Path]] = []
+    installed: list[Path] = []
+    preserve_backups = False
+
+    try:
+        # Prepare every replacement beside its destination first. A staging
+        # failure therefore cannot leave a mixture of old and new modules.
+        for source, destination in files:
+            destination = Path(destination)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            descriptor, staged_name = tempfile.mkstemp(
+                prefix=f".{destination.name}.clm-update-",
+                dir=destination.parent,
+            )
+            os.close(descriptor)
+            staged_path = Path(staged_name)
+            try:
+                shutil.copy2(source, staged_path)
+            except Exception:
+                staged_path.unlink(missing_ok=True)
+                raise
+            staged.append((staged_path, destination))
+
+        try:
+            for staged_path, destination in staged:
+                if destination.exists() or destination.is_symlink():
+                    descriptor, backup_name = tempfile.mkstemp(
+                        prefix=f".{destination.name}.clm-backup-",
+                        dir=destination.parent,
+                    )
+                    os.close(descriptor)
+                    backup_path = Path(backup_name)
+                    backup_path.unlink()
+                    os.replace(destination, backup_path)
+                    backups.append((backup_path, destination))
+
+                os.replace(staged_path, destination)
+                installed.append(destination)
+        except Exception as install_error:
+            rollback_errors = []
+            for destination in reversed(installed):
+                try:
+                    destination.unlink(missing_ok=True)
+                except OSError as exc:
+                    rollback_errors.append(f"could not remove {destination}: {exc}")
+            for backup_path, destination in reversed(backups):
+                if backup_path.exists() or backup_path.is_symlink():
+                    try:
+                        os.replace(backup_path, destination)
+                    except OSError as exc:
+                        rollback_errors.append(
+                            f"could not restore {destination} from {backup_path}: {exc}"
+                        )
+            if rollback_errors:
+                preserve_backups = True
+                raise RuntimeError(
+                    "Update replacement failed and rollback was incomplete: "
+                    + "; ".join(rollback_errors)
+                ) from install_error
+            raise
+    finally:
+        for staged_path, _destination in staged:
+            try:
+                staged_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+        if not preserve_backups:
+            for backup_path, _destination in backups:
+                try:
+                    backup_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+
 def install_update() -> int:
     """Download the latest source archive and replace the installed CLM-1 files."""
     print("[update] Checking GitHub and downloading the latest CLM-1...")
@@ -177,20 +255,23 @@ def install_update() -> int:
             _validate_source_tree(source_root)
             code_dir = Path(__file__).resolve().parent
             app_dir = Path(APP_DIR)
-            app_dir.mkdir(parents=True, exist_ok=True)
+            install_files = []
             for name in CORE_FILES:
                 source = source_root / name
                 if source.is_file():
-                    shutil.copy2(source, code_dir / name)
+                    install_files.append((source, code_dir / name))
             for name in DATA_FILES:
                 source = source_root / name
                 if source.is_file():
-                    shutil.copy2(source, app_dir / name)
+                    install_files.append((source, app_dir / name))
             version_match = re.search(
-                r'^APP_VERSION\s*=\s*["\']([^"\']+)["\']',
+                r'^APP_VERSION\\s*=\\s*["\\']([^"\\']+)["\\']',
                 (source_root / "clm").read_text(encoding="utf-8"), re.M)
             if version_match:
-                (app_dir / "VERSION").write_text(version_match.group(1) + "\n", encoding="utf-8")
+                version_source = Path(temp) / "VERSION"
+                version_source.write_text(version_match.group(1) + "\\n", encoding="utf-8")
+                install_files.append((version_source, app_dir / "VERSION"))
+            _replace_files_transactionally(install_files)
         try:
             (CONFIG_DIR / "update-check.json").unlink()
         except FileNotFoundError:
