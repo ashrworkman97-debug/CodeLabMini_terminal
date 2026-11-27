@@ -2,6 +2,14 @@
 
 Notable changes to CLM-1 are documented here.
 
+
+## 1.15.0 — Transactional Self-Updates
+
+- Stage every core module, data file, and version marker beside its destination before replacing installed files, so a staging failure leaves the current installation untouched.
+- Use atomic per-file replacement and roll back already-replaced files if a later replacement fails; retain and identify backup files if rollback itself cannot complete.
+- Added offline tests for successful staging, staging failures, replacement rollback, and the recoverable missing-diagnostics-module step in the 1.6.0-to-1.7.0 update transition.
+- Updated the CLI, Linux/macOS/Windows installer labels, and command reference to 1.15.0.
+
 ## 1.14.0 — Safer Self-Updates
 
 - Validate that every required CLM-1 core module is present in the downloaded update archive before replacing any installed files.
