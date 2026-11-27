@@ -93,13 +93,13 @@ bash install.sh
 source ~/.bashrc
 ```
 
-Launch the console with `clm`, or connect immediately with `clm device clm`. CLM-1 quietly checks GitHub for a newer host version at startup (at most once per day). If one is available, run `clm update` to download and install it, then close and reopen CLM-1. Use `clm update check` to check manually. This updates the host software; firmware updates still require `clm_h@cker_init`.
+Launch the console with `clm`, or connect immediately with `clm device clm`. CLM-1 quietly checks GitHub for a newer host version at startup (at most once per day). If one is available, run `clm update` to download and install it, then close and reopen CLM-1. Use `clm update check` to check manually. Before replacing installed files, the updater safely extracts the archive, rejects path traversal and symbolic-link entries, enforces a 64 MiB expanded-size limit, and verifies every required core module. It stages all replacements beside their destinations before changing installed files; if a replacement fails, it attempts to restore the previous files and retains any backup it cannot restore. Unsafe, oversized, or incomplete archives are rejected before installed files are changed. This updates the host software; firmware updates still require `clm_h@cker_init`.
 
 ### Windows and macOS
 
 #### Windows 10/11
 
-Open PowerShell in the cloned repository folder. If needed, install Python 3.10+ from [python.org](https://www.python.org/downloads/windows/) and enable the Python launcher (`py`). Run:
+Open PowerShell in the cloned repository folder. If needed, install Python 3.10+ from [python.org](https://www.python.org/downloads/windows/). The installer uses a compatible `py -3` launcher when available and falls back to a compatible `python` command. Run:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
@@ -234,7 +234,7 @@ Use `help` inside CLM-1 for the built-in help. The full reference is in [COMMAND
 
 **Local terminal utilities:** `roll`, `rps`, `magic8`, `joke`, `fortune`, `time`, `uptime`, `whoami`, `ascii`, `clear`, and `credits`.
 
-The `whoami` command reports the detected host operating system/release and Python version alongside the Code Lab Mini target.
+The `whoami` command reports the host operating system and Python version alongside the Code Lab Mini target. On Linux, it prefers `PRETTY_NAME` from `/etc/os-release` (for example, `Linux Mint 22.2`) and falls back to `NAME` plus `VERSION_ID` when `PRETTY_NAME` is omitted. If no distribution name is available, it shows the kernel release. In ChromeOS Linux (Crostini), the ChromeOS milestone takes precedence and the guest Linux kernel release is also shown.
 
 ## AI Command Studio (optional)
 
@@ -272,7 +272,7 @@ python3 clm --version
 python3 clm --help
 ```
 
-GitHub Actions runs the Python checks on Linux, Windows, and macOS with Python 3.10, 3.11, 3.12, and 3.13. Firmware compilation runs on Linux. Firmware compilation and physical-device behavior still need to be checked with a compatible Arduino toolchain and real hardware.
+GitHub Actions runs the Python checks on Linux, Windows, and macOS with Python 3.10, 3.11, 3.12, 3.13, and 3.14. Firmware compilation runs on Linux. Firmware compilation and physical-device behavior still need to be checked with a compatible Arduino toolchain and real hardware.
 
 ## Troubleshooting
 

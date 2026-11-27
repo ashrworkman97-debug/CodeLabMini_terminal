@@ -40,7 +40,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - name: Check out repository
@@ -80,3 +80,88 @@ jobs:
           python clm --help
           python clm doctor
           python clm doctor --json
+
+  windows-install-smoke:
+    name: Windows installer and installed CLI smoke test
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Run the real per-user Windows installer
+        shell: pwsh
+        env:
+          # The py launcher otherwise selects the runner's newest installed
+          # Python (which can differ from the version selected by setup-python).
+          PY_PYTHON3: "3.13"
+        run: |
+          $ErrorActionPreference = "Stop"
+          & .\install_windows.ps1
+          if ($LASTEXITCODE -ne 0) {
+            throw "Windows installer exited with code $LASTEXITCODE"
+          }
+
+      - name: Verify installed files and launch the installed CLI
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $appDir = Join-Path $env:LOCALAPPDATA "CLM-1"
+          $required = @("clm", "clm.cmd", "clm_ai.py", "clm_flash.py", "clm_paths.py", "clm_doctor.py", "clm_update.py", "requirements.txt")
+          foreach ($file in $required) {
+            $path = Join-Path $appDir $file
+            if (-not (Test-Path $path -PathType Leaf)) {
+              throw "Installed file is missing: $path"
+            }
+          }
+          $venvPython = Join-Path $appDir ".venv\Scripts\python.exe"
+          if (-not (Test-Path $venvPython -PathType Leaf)) {
+            throw "Installed virtual-environment Python is missing: $venvPython"
+          }
+          $installedPython = & $venvPython -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
+          if ($LASTEXITCODE -ne 0) { throw "Could not inspect the installed Python version" }
+          if ($installedPython -ne "3.13") {
+            throw "Expected the installer to use Python 3.13, but the installed environment uses $installedPython."
+          }
+          Write-Host "Installed virtual environment uses Python $installedPython."
+          & (Join-Path $appDir "clm.cmd") --version
+          if ($LASTEXITCODE -ne 0) { throw "Installed CLI --version failed" }
+          & (Join-Path $appDir "clm.cmd") --help
+          if ($LASTEXITCODE -ne 0) { throw "Installed CLI --help failed" }
+          & (Join-Path $appDir "clm.cmd") doctor --json
+          if ($LASTEXITCODE -ne 0) { throw "Installed CLI doctor --json failed" }
+          Write-Host "Windows per-user installation and installed CLI smoke test passed."
+
+      - name: Verify installer falls back from an unsupported py launcher
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $testRoot = Join-Path $env:RUNNER_TEMP "clm-python-fallback"
+          $fakeBin = Join-Path $testRoot "bin"
+          $env:LOCALAPPDATA = Join-Path $testRoot "localappdata"
+          New-Item -ItemType Directory -Force -Path $fakeBin, $env:LOCALAPPDATA | Out-Null
+          $fakePy = Join-Path $fakeBin "py.cmd"
+          $pyMarker = Join-Path $testRoot "py-launcher-invoked.txt"
+          Set-Content -Encoding ASCII -Path $fakePy -Value "@echo off`r`necho invoked> `"$pyMarker`"`r`nexit /b 1"
+          $env:PATH = "$fakeBin;$env:PATH"
+          & .\install_windows.ps1
+          if ($LASTEXITCODE -ne 0) { throw "Windows installer fallback test failed." }
+          if (-not (Test-Path $pyMarker -PathType Leaf)) {
+            throw "The fake py launcher was not invoked; the fallback path was not tested."
+          }
+          $appDir = Join-Path $env:LOCALAPPDATA "CLM-1"
+          $venvPython = Join-Path $appDir ".venv\Scripts\python.exe"
+          if (-not (Test-Path $venvPython -PathType Leaf)) {
+            throw "Fallback installer did not create its Python environment."
+          }
+          $installedPython = & $venvPython -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
+          if ($LASTEXITCODE -ne 0 -or $installedPython -ne "3.13") {
+            throw "Expected fallback to setup-python 3.13, but found $installedPython."
+          }
+          & (Join-Path $appDir "clm.cmd") --version
+          if ($LASTEXITCODE -ne 0) { throw "CLI failed after Python launcher fallback." }
+          Write-Host "Windows installer successfully fell back to the compatible python command."

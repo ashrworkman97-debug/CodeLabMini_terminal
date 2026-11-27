@@ -2,23 +2,33 @@
 $ErrorActionPreference = "Stop"
 $SourceDir = $PSScriptRoot
 $AppDir = Join-Path $env:LOCALAPPDATA "CLM-1"
-$Version = "1.11.0"
+$Version = "1.15.0"
 $Required = @("clm", "clm_ai.py", "clm_flash.py", "clm_paths.py", "clm_doctor.py", "clm_update.py", "clm_firmware.ino", "TERMS_OF_USE.md", "requirements.txt")
 foreach ($File in $Required) {
     if (-not (Test-Path (Join-Path $SourceDir $File) -PathType Leaf)) { throw "Required project file is missing: $File" }
 }
-$PythonLauncher = Get-Command py -ErrorAction SilentlyContinue
-$PythonCommand = Get-Command python -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $AppDir | Out-Null
 $VenvPython = Join-Path $AppDir ".venv\Scripts\python.exe"
 if (-not (Test-Path $VenvPython)) {
-    if ($PythonLauncher) {
-        & py -3 -m venv (Join-Path $AppDir ".venv")
-    } elseif ($PythonCommand) {
-        & python -m venv (Join-Path $AppDir ".venv")
-    } else {
-        throw "Python 3.10 or newer is required. Install it from https://www.python.org/downloads/windows/."
+    $PythonExecutable = $null
+    $PythonArguments = @()
+    if (Get-Command py -ErrorAction SilentlyContinue) {
+        & py -3 -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)"
+        if ($LASTEXITCODE -eq 0) {
+            $PythonExecutable = "py"
+            $PythonArguments = @("-3")
+        }
     }
+    if (-not $PythonExecutable -and (Get-Command python -ErrorAction SilentlyContinue)) {
+        & python -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)"
+        if ($LASTEXITCODE -eq 0) {
+            $PythonExecutable = "python"
+        }
+    }
+    if (-not $PythonExecutable) {
+        throw "Python 3.10 or newer is required. Neither the py launcher nor the python command found a compatible interpreter. Install Python from https://www.python.org/downloads/windows/."
+    }
+    & $PythonExecutable @PythonArguments -m venv (Join-Path $AppDir ".venv")
     if ($LASTEXITCODE -ne 0) { throw "Could not create the CLM-1 Python environment." }
 }
 foreach ($File in $Required) { Copy-Item -Force (Join-Path $SourceDir $File) (Join-Path $AppDir $File) }

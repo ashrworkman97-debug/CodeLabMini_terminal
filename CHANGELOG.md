@@ -2,6 +2,38 @@
 
 Notable changes to CLM-1 are documented here.
 
+
+## 1.15.0 — Transactional Self-Updates
+
+- Stage every core module, data file, and version marker beside its destination before replacing installed files, so a staging failure leaves the current installation untouched.
+- Use atomic per-file replacement and roll back already-replaced files if a later replacement fails; retain and identify backup files if rollback itself cannot complete.
+- Added offline tests for successful staging, staging failures, replacement rollback, and the recoverable missing-diagnostics-module step in the 1.6.0-to-1.7.0 update transition.
+- Updated the CLI, Linux/macOS/Windows installer labels, and command reference to 1.15.0.
+
+## 1.14.0 — Safer Self-Updates
+
+- Validate that every required CLM-1 core module is present in the downloaded update archive before replacing any installed files.
+- Reject incomplete archives before touching the existing CLI installation, preventing partial updates from silently omitting modules needed at startup.
+- Safely extract ZIP updates by rejecting traversal and symbolic-link entries, limiting expanded contents to 64 MiB, and bounding archive entry counts before installed files are replaced.
+- Added offline tests for complete and incomplete archives and verified that missing required modules cause no installed files to be copied or changed.
+- Updated the CLI, Linux/macOS/Windows installer labels, and command reference to 1.14.0.
+- The Windows installer checks that its selected interpreter is Python 3.10 or newer and falls back from an unsupported `py -3` launcher to a compatible `python` command; CI exercises the fallback.
+
+## 1.13.0 — Linux Distribution Identification
+
+- Updated Linux `whoami` reporting to prefer `PRETTY_NAME` from `/etc/os-release`, with a `NAME` + `VERSION_ID` fallback for valid files that omit the optional pretty name. If `VERSION_ID` is absent, it also uses the descriptive `VERSION` field.
+- Identifies distributions such as Linux Mint, Debian, Fedora, and Ubuntu by their product name instead of only their kernel release.
+- Kept ChromeOS Crostini milestone detection as the higher-priority host label, with kernel-release fallback when distribution metadata is unavailable.
+- Added offline tests for Linux distribution identification and unavailable `os-release` metadata.
+- Updated the CLI, Linux/macOS/Windows installer labels, and command reference to 1.13.0.
+
+## 1.12.0 — ChromeOS Host Identification
+
+- Updated `whoami` to recognize ChromeOS Crostini through its `/dev/.cros_milestone` marker.
+- Reports the ChromeOS milestone alongside the Crostini Linux kernel release, while retaining ordinary Linux reporting when the marker is absent or invalid.
+- Added offline tests for detected, absent, and malformed ChromeOS milestone markers.
+- Updated the CLI, Linux/macOS/Windows installer labels, and command reference to 1.12.0.
+
 ## 1.4.0 — Direct Firmware Flashing
 
 - Added `clm_h@cker_init` for local Arduino CLI compilation and USB-serial firmware uploads.

@@ -8,6 +8,7 @@ import datetime as _datetime
 import queue
 import platform
 import random
+from pathlib import Path
 import shlex
 import sys
 import threading
@@ -20,7 +21,7 @@ from clm_ai import (
 from clm_flash import handle_flash_command
 from clm_update import check_for_update, install_update
 
-APP_VERSION = "1.11.0"
+APP_VERSION = "1.15.0"
 DEVICE_NAME = "Code Lab Mini"
 USB_VID = 0x0403
 USB_PID = 0x6015
@@ -349,7 +350,7 @@ LOCAL TERMINAL FUN (doesn't need the Mini)
   fortune                   Get a tiny fortune
   time                      Show local date and time
   uptime                    Show this CLM-1 session duration
-  whoami                    Show host OS, Python version, and target device
+  whoami                    Show Linux distro/ChromeOS host, Python, and target device
   ascii                     Print the CLM-1 logo
   clear                     Clear the terminal
   credits                   Show project credits
@@ -453,6 +454,32 @@ def host_os_label() -> str:
 
     host_name = "Linux" if system.lower() == "linux" else system
     release = platform.release()
+    if host_name == "Linux":
+        # Crostini exposes the ChromeOS milestone to its Linux container here.
+        # Keep the guest kernel version visible so users can distinguish the
+        # ChromeOS host from the Debian/Linux environment running CLM-1.
+        try:
+            milestone = Path("/dev/.cros_milestone").read_text(encoding="ascii").strip()
+        except (OSError, UnicodeError):
+            milestone = ""
+        if milestone.isdecimal():
+            kernel = f"; kernel {release}" if release else ""
+            return f"ChromeOS M{milestone} (Crostini Linux{kernel})"
+        try:
+            os_release = platform.freedesktop_os_release()
+        except (OSError, UnicodeError):
+            os_release = {}
+        pretty_name = os_release.get("PRETTY_NAME", "").strip()
+        if pretty_name:
+            return pretty_name
+        # PRETTY_NAME is optional in os-release; retain useful distro details
+        # when a system provides only NAME and VERSION_ID.
+        distribution_name = os_release.get("NAME", "").strip()
+        version_id = os_release.get("VERSION_ID", "").strip()
+        if not version_id:
+            version_id = os_release.get("VERSION", "").strip()
+        if distribution_name:
+            return f"{distribution_name} {version_id}".strip()
     return f"{host_name} {release}" if release else host_name
 
 

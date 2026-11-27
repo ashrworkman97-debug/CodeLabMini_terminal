@@ -1,4 +1,4 @@
-CLM-1 v1.11.0 — COMMAND REFERENCE
+CLM-1 v1.15.0 — COMMAND REFERENCE
 =================================
 
 START / CONNECTION
@@ -88,7 +88,7 @@ LOCAL TERMINAL UTILITIES (NO DEVICE REQUIRED)
   fortune                     Show a short fortune
   time                        Show local date and time
   uptime                      Show CLM-1 session uptime
-  whoami                      Show host OS, Python version, and target information
+  whoami                      Show Linux distro/ChromeOS host, Python, and target information
   ascii                       Display the CLM-1 logo
   clear                       Clear the terminal
   credits                     Show project components
